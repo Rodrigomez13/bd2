@@ -77,10 +77,17 @@ export const MapView: React.FC<MapViewProps> = ({
       className={`relative w-full h-full min-h-[280px] bg-[#081226] overflow-hidden select-none ${className}`}
       id="bear-map-container"
     >
-      {/* Dynamic Night City Map SVG */}
+      <img
+        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Redise%C3%B1o%20de%20Pantalla%20de%20Inicio%20App.png-yoNfwwFbq5u5XoyGM27D4kW8OFtr9e.jpeg"
+        alt="Paisaje futurista de Formosa al atardecer"
+        referrerPolicy="no-referrer"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      <div className="absolute inset-0 bg-[#081226]/35 pointer-events-none" />
+      {/* Dynamic Night City Map SVG overlay */}
       <svg
         viewBox="0 0 400 600"
-        className="w-full h-full object-cover transition-transform duration-500"
+        className="w-full h-full object-cover opacity-35 transition-transform duration-500"
         style={{ transform: `scale(${zoom})` }}
         preserveAspectRatio="xMidYMid slice"
       >

@@ -21,12 +21,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onDriverLogin
 
   return (
     <div className="relative min-h-[640px] h-full flex flex-col justify-between bg-[#081226] text-white p-6 overflow-y-auto">
-      {/* Background Nocturnal Skyline Glow & Bear Mascot silhouette */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-gradient-to-b from-[#F5B51B]/20 via-[#2A1B4E]/30 to-transparent rounded-full blur-3xl" />
-        <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-25">
-          <BearMascotIcon size={240} />
-        </div>
+      {/* Brand artwork backdrop */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Redise%C3%B1o%20de%20Pantalla%20de%20Inicio%20App.png-yoNfwwFbq5u5XoyGM27D4kW8OFtr9e.jpeg" alt="" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-cover opacity-45" />
+        <div className="absolute inset-0 bg-[#081226]/70" />
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-20"><BearMascotIcon size={240} /></div>
       </div>
 
       {/* Top Brand Section */}
