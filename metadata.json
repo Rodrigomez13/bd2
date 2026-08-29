@@ -1,0 +1,7 @@
+{
+  "name": "BearDrive",
+  "description": "App de movilidad urbana y viajes para Formosa y Argentina con modo nocturno premium y tarifas transparentes.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
