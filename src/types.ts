@@ -13,7 +13,8 @@ export type ScreenId =
   | 'payments'
   | 'promos'
   | 'benefits'
-  | 'driver-mode';
+  | 'driver-mode'
+  | 'admin';
 
 export type TabId = 'home' | 'rides' | 'activity' | 'promos' | 'account';
 

@@ -15,6 +15,7 @@ import { TripHistoryScreen } from './components/screens/TripHistoryScreen';
 import { PaymentMethodsScreen } from './components/screens/PaymentMethodsScreen';
 import { PromosScreen } from './components/screens/PromosScreen';
 import { BenefitsScreen } from './components/screens/BenefitsScreen';
+import { AdminDashboardScreen } from './components/screens/AdminDashboardScreen';
 import { DriverModeScreen } from './components/screens/DriverModeScreen';
 import { ChatCallModal } from './components/ChatCallModal';
 import { ShareTripModal } from './components/ShareTripModal';
@@ -154,6 +155,7 @@ export function App() {
     { id: 'payments', label: '12 • Métodos de Pago & Wallet', group: 'Usuario' },
     { id: 'account', label: '13 • Mi Cuenta & Membresía', group: 'Usuario' },
     { id: 'driver-mode', label: '14 • Modo Conductor & Ofertas', group: 'Conductor' },
+    { id: 'admin', label: '15 • Panel Administrativo', group: 'Operaciones' },
   ];
 
   return (
@@ -338,6 +340,10 @@ export function App() {
               }}
               onNavigateToDriver={() => setCurrentScreen('driver-mode')}
             />
+          )}
+
+          {currentScreen === 'admin' && (
+            <AdminDashboardScreen onBack={() => setCurrentScreen('home')} />
           )}
 
           {currentScreen === 'driver-mode' && (

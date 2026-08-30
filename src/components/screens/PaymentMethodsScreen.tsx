@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, Wallet, Smartphone, Banknote, Plus, Check, Trash2, ArrowRight } from 'lucide-react';
+import { CreditCard, Wallet, Smartphone, Banknote, Plus, Check, Trash2, ArrowRight, QrCode, ShieldCheck } from 'lucide-react';
 import { PAYMENT_METHODS } from '../../data/mockData';
 import { PaymentMethod } from '../../types';
 
@@ -12,6 +12,7 @@ export const PaymentMethodsScreen: React.FC<PaymentMethodsScreenProps> = ({ onBa
   const [selectedId, setSelectedId] = useState<string>('pay-cash');
   const [walletBalance, setWalletBalance] = useState<number>(4850);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [newCardNumber, setNewCardNumber] = useState('');
 
   const handleAddCard = (e: React.FormEvent) => {
@@ -65,13 +66,10 @@ export const PaymentMethodsScreen: React.FC<PaymentMethodsScreenProps> = ({ onBa
                 ${walletBalance.toLocaleString('es-AR')}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleTopUp}
-              className="px-3.5 py-2 rounded-xl bg-[#F5B51B] hover:bg-[#FFBE22] active:scale-95 text-[#081226] font-bold text-xs shadow-md transition-all cursor-pointer"
-            >
-              + Cargar saldo
-            </button>
+            <div className="mt-3 flex gap-2">
+              <button type="button" onClick={handleTopUp} className="flex-1 rounded-xl bg-[#F5B51B] px-3.5 py-2 text-xs font-bold text-[#081226] shadow-md transition-all hover:bg-[#FFBE22] active:scale-95">+ Cargar saldo</button>
+              <button type="button" onClick={() => setShowQrModal(true)} className="flex items-center gap-1.5 rounded-xl border border-[#F5B51B]/60 bg-[#0D1930] px-3 py-2 text-xs font-bold text-[#FFD66A]"><QrCode className="h-4 w-4" /> Pagar QR</button>
+            </div>
           </div>
         </div>
 
@@ -96,29 +94,11 @@ export const PaymentMethodsScreen: React.FC<PaymentMethodsScreenProps> = ({ onBa
               >
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-[#0D1930] border border-[#33405A] flex items-center justify-center text-lg shrink-0">
-                    {method.type === 'cash' ? (
-                      '💵'
-                    ) : method.type === 'mercadopago' ? (
-                      '📱'
-                    ) : method.type === 'wallet' ? (
-                      '🐻'
-                    ) : (
-                      '💳'
-                    )}
+                    {method.type === 'cash' ? '💵' : method.type === 'mercadopago' ? '📱' : method.type === 'wallet' ? '🐻' : '💳'}
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white">{method.name}</span>
-                    <span className="text-xs text-[#AEB7C8]">{method.details}</span>
-                  </div>
+                  <div className="flex flex-col"><span className="text-sm font-bold text-white">{method.name}</span><span className="text-xs text-[#AEB7C8]">{method.details}</span></div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  {isSelected && (
-                    <div className="w-6 h-6 rounded-full bg-[#F5B51B] flex items-center justify-center text-[#081226]">
-                      <Check className="w-4 h-4 stroke-[3]" />
-                    </div>
-                  )}
-                </div>
+                {isSelected && <div className="w-6 h-6 rounded-full bg-[#F5B51B] flex items-center justify-center text-[#081226]"><Check className="w-4 h-4 stroke-[3]" /></div>}
               </div>
             );
           })}
@@ -198,6 +178,19 @@ export const PaymentMethodsScreen: React.FC<PaymentMethodsScreenProps> = ({ onBa
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl border border-[#F5B51B] bg-[#15213A] p-6 text-center shadow-2xl">
+            <QrCode className="mx-auto h-8 w-8 text-[#F5B51B]" />
+            <h3 className="mt-3 text-lg font-black">Pagar con QR</h3>
+            <p className="mt-1 text-xs leading-relaxed text-[#AEB7C8]">Escaneá este código desde tu billetera para cargar BearBalance.</p>
+            <div className="mx-auto mt-5 flex h-44 w-44 items-center justify-center rounded-2xl bg-white p-3" aria-label="Código QR de pago de demostración"><div className="grid h-full w-full grid-cols-7 gap-1 bg-white">{Array.from({ length: 49 }, (_, index) => <span key={index} className={(index * 7 + 3) % 5 < 2 || index < 7 || index % 7 < 2 ? 'bg-[#081226]' : 'bg-white'} />)}</div></div>
+            <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-[#59C878]"><ShieldCheck className="h-4 w-4" /> Pago seguro de demostración</div>
+            <button type="button" onClick={() => setShowQrModal(false)} className="mt-5 w-full rounded-xl bg-[#F5B51B] py-3 text-xs font-black text-[#081226]">Cerrar</button>
           </div>
         </div>
       )}
