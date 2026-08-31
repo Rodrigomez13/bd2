@@ -15,6 +15,7 @@ export const DriverModeScreen: React.FC<DriverModeScreenProps> = ({
   const [isOnline, setIsOnline] = useState(true);
   const [todayEarnings, setTodayEarnings] = useState(28450);
   const [completedRides, setCompletedRides] = useState(11);
+  const [acceptedRide, setAcceptedRide] = useState<{ passengerName: string; origin: string; destination: string; fare: number } | null>(null);
   const [activeRequest, setActiveRequest] = useState<{
     id: string;
     passengerName: string;
@@ -37,7 +38,12 @@ export const DriverModeScreen: React.FC<DriverModeScreenProps> = ({
     if (!activeRequest) return;
     setTodayEarnings((prev) => prev + activeRequest.suggestedFare);
     setCompletedRides((prev) => prev + 1);
-    alert(`¡Viaje aceptado! Iniciando navegación hacia ${activeRequest.origin}.`);
+    setAcceptedRide({
+      passengerName: activeRequest.passengerName,
+      origin: activeRequest.origin,
+      destination: activeRequest.destination,
+      fare: activeRequest.suggestedFare,
+    });
     setActiveRequest(null);
   };
 
@@ -114,8 +120,26 @@ export const DriverModeScreen: React.FC<DriverModeScreenProps> = ({
         </div>
       </div>
 
+      {/* Accepted ride status */}
+      {acceptedRide && (
+        <div className="p-4 rounded-2xl bg-[#15213A] border-2 border-[#59C878] shadow-2xl flex flex-col gap-3 mb-4" role="status" aria-live="polite">
+          <div className="flex items-center justify-between">
+            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-[#59C878] text-[#081226]">Viaje asignado</span>
+            <span className="text-lg font-black text-[#FFD66A]">${acceptedRide.fare.toLocaleString('es-AR')}</span>
+          </div>
+          <div className="text-xs text-white">
+            <p className="font-bold">Pasajero: {acceptedRide.passengerName}</p>
+            <p className="mt-1 text-[#AEB7C8]">Recogida: {acceptedRide.origin}</p>
+            <p className="text-[#AEB7C8]">Destino: {acceptedRide.destination}</p>
+          </div>
+          <button type="button" onClick={() => setAcceptedRide(null)} className="w-full rounded-xl bg-[#59C878] py-2.5 text-xs font-black text-[#081226] hover:bg-[#4eb369]">
+            Iniciar siguiente viaje
+          </button>
+        </div>
+      )}
+
       {/* Incoming Ride Request Offer Card */}
-      {isOnline && activeRequest ? (
+      {isOnline && activeRequest && !acceptedRide ? (
         <div className="p-4 rounded-2xl bg-[#15213A] border-2 border-[#F5B51B] shadow-2xl flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

@@ -1,4 +1,33 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+.map-control {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid #33405A;
+  background: rgb(21 33 58 / 0.92);
+  color: white;
+  box-shadow: 0 10px 25px rgb(0 0 0 / 0.2);
+  backdrop-filter: blur(12px);
+}
+
+.map-control:active { transform: scale(0.95); }
+
+.bear-map-marker { background: transparent; border: 0; }
+.bear-map-marker span {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  background: var(--marker-color);
+  border: 3px solid #081226;
+  box-shadow: 0 0 0 5px rgb(245 181 27 / 0.24), 0 3px 10px rgb(0 0 0 / 0.45);
+}
+
 
 @layer base {
   * {

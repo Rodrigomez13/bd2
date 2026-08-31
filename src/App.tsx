@@ -14,6 +14,8 @@ import { AccountScreen } from './components/screens/AccountScreen';
 import { TripHistoryScreen } from './components/screens/TripHistoryScreen';
 import { PaymentMethodsScreen } from './components/screens/PaymentMethodsScreen';
 import { PromosScreen } from './components/screens/PromosScreen';
+import { BenefitsScreen } from './components/screens/BenefitsScreen';
+import { AdminDashboardScreen } from './components/screens/AdminDashboardScreen';
 import { DriverModeScreen } from './components/screens/DriverModeScreen';
 import { ChatCallModal } from './components/ChatCallModal';
 import { ShareTripModal } from './components/ShareTripModal';
@@ -105,6 +107,7 @@ export function App() {
       case 'history':
       case 'payments':
       case 'promos':
+      case 'benefits':
         setCurrentScreen('home');
         break;
       case 'searching-driver':
@@ -132,6 +135,7 @@ export function App() {
   const showBottomNav =
     currentScreen === 'home' ||
     currentScreen === 'promos' ||
+    currentScreen === 'benefits' ||
     currentScreen === 'history' ||
     currentScreen === 'account';
 
@@ -146,10 +150,12 @@ export function App() {
     { id: 'active-trip', label: '08 • En Viaje / GPS en Vivo', group: 'Pasajero' },
     { id: 'trip-finished', label: '09 • Viaje Finalizado & Calificación', group: 'Pasajero' },
     { id: 'promos', label: '10 • Promos & Flyers Oficiales', group: 'Beneficios' },
+    { id: 'benefits', label: '11 • BearDrive Benefits', group: 'Beneficios' },
     { id: 'history', label: '11 • Mis Viajes & Recibos', group: 'Usuario' },
     { id: 'payments', label: '12 • Métodos de Pago & Wallet', group: 'Usuario' },
     { id: 'account', label: '13 • Mi Cuenta & Membresía', group: 'Usuario' },
     { id: 'driver-mode', label: '14 • Modo Conductor & Ofertas', group: 'Conductor' },
+    { id: 'admin', label: '15 • Panel Administrativo', group: 'Operaciones' },
   ];
 
   return (
@@ -322,6 +328,10 @@ export function App() {
             <PaymentMethodsScreen onBack={() => setCurrentScreen('account')} />
           )}
 
+          {currentScreen === 'benefits' && (
+            <BenefitsScreen onNavigateToPromos={() => setCurrentScreen('promos')} />
+          )}
+
           {currentScreen === 'promos' && (
             <PromosScreen
               onUsePromo={(code) => {
@@ -330,6 +340,10 @@ export function App() {
               }}
               onNavigateToDriver={() => setCurrentScreen('driver-mode')}
             />
+          )}
+
+          {currentScreen === 'admin' && (
+            <AdminDashboardScreen onBack={() => setCurrentScreen('home')} />
           )}
 
           {currentScreen === 'driver-mode' && (

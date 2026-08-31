@@ -134,8 +134,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <h3 className="text-lg font-black text-white mt-1">20% OFF en tu primer viaje</h3>
               <p className="text-xs text-[#AEB7C8]">Válido en toda Formosa • Tocá para ver promos</p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-[#081226] border border-[#F5B51B] flex items-center justify-center text-2xl shadow-inner shrink-0 group-hover:scale-110 transition-transform">
-              🐻
+            <div className="w-12 h-12 rounded-2xl bg-[#081226] border border-[#F5B51B] flex items-center justify-center shadow-inner shrink-0 group-hover:scale-110 transition-transform overflow-hidden">
+              <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-beardrive-RWdyfxydxTNGJexZYmk2yMDlpCGWWK.png" alt="Ícono BearDrive" referrerPolicy="no-referrer" className="h-10 w-10 object-contain" />
             </div>
           </div>
         </div>
