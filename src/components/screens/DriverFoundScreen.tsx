@@ -26,16 +26,18 @@ export const DriverFoundScreen: React.FC<DriverFoundScreenProps> = ({
   return (
     <div className="relative min-h-[640px] flex flex-col bg-[#081226] text-white">
       {/* Top Map with Approaching Vehicle Animation */}
-      <div className="relative h-72 w-full overflow-hidden border-b border-[#33405A]/40">
+      <div className="relative h-[40vh] min-h-[290px] max-h-[460px] w-full overflow-hidden border-b border-[#33405A]/40">
         <MapView
           origin={trip.origin}
           destination={trip.destination}
           driverApproaching={true}
-          interactive={false}
+          interactive={true}
+          showControls={true}
+          allowFullscreenToggle={true}
         />
 
         {/* ETA Badge */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-[#15213A]/95 backdrop-blur-md border border-[#F5B51B] shadow-xl flex items-center gap-2">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-[#15213A]/95 backdrop-blur-md border border-[#F5B51B] shadow-xl flex items-center gap-2 z-20">
           <span className="w-2 h-2 rounded-full bg-[#59C878] animate-ping" />
           <span className="text-xs font-extrabold text-white">
             Tu conductor llega en ~2 min

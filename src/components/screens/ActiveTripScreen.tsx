@@ -41,6 +41,7 @@ export const ActiveTripScreen: React.FC<ActiveTripScreenProps> = ({
   const [speed, setSpeed] = useState(42);
   const [isPlaying, setIsPlaying] = useState(true);
   const [simulationSpeedMultiplier, setSimulationSpeedMultiplier] = useState<number>(1);
+  const [isManualExploring, setIsManualExploring] = useState(false);
 
   // References for requestAnimationFrame tracking
   const progressRef = useRef(15);
@@ -198,18 +199,21 @@ export const ActiveTripScreen: React.FC<ActiveTripScreenProps> = ({
 
   return (
     <div className="relative min-h-[640px] flex flex-col bg-[#081226] text-white">
-      {/* Top Map Area with Live Navigation */}
-      <div className="relative h-[310px] w-full overflow-hidden">
+      {/* Top Map Area with Live Navigation & Responsive Interactivity */}
+      <div className="relative h-[44vh] min-h-[310px] max-h-[500px] w-full overflow-hidden border-b border-[#33405A]/40">
         <MapView
           origin={trip.origin}
           destination={trip.destination}
-          isNavigating={true}
+          isNavigating={!isManualExploring}
           progress={progress}
-          interactive={false}
+          interactive={true}
+          showControls={true}
+          allowFullscreenToggle={true}
+          onUserManualPan={() => setIsManualExploring(true)}
         />
 
         {/* Top Turn-by-Turn Instruction Banner with dynamic updates */}
-        <div className="absolute top-3 inset-x-3 z-20">
+        <div className="absolute top-3 left-3 right-16 z-20">
           <div className="p-3 rounded-2xl bg-[#15213A]/95 backdrop-blur-md border border-[#F5B51B] shadow-2xl flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F5B51B] flex items-center justify-center text-[#081226] shrink-0 font-extrabold shadow-md">
               <Navigation className="w-5 h-5 transform rotate-45" />
@@ -229,6 +233,23 @@ export const ActiveTripScreen: React.FC<ActiveTripScreenProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Floating Re-center on Vehicle Button if user panned manually */}
+        {isManualExploring && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-top-2">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('medium');
+                setIsManualExploring(false);
+              }}
+              className="px-3.5 py-1.5 rounded-full bg-[#F5B51B] text-[#081226] font-extrabold text-xs shadow-[0_0_15px_rgba(245,181,27,0.6)] flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all border border-white/40"
+            >
+              <Navigation className="w-3.5 h-3.5 fill-[#081226]" />
+              <span>Centrar en el auto</span>
+            </button>
+          </div>
+        )}
 
         {/* Floating Speedometer, Simulation Controls & SOS Button */}
         <div className="absolute bottom-3 inset-x-3 z-10 flex items-center justify-between">

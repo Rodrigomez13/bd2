@@ -195,9 +195,14 @@ export const DriverModeScreen: React.FC<DriverModeScreenProps> = ({
       </div>
 
       {/* Map Radar Simulation */}
-      <div className="h-44 w-full rounded-2xl overflow-hidden border border-[#33405A] mb-4 relative">
-        <MapView interactive={false} showCars={true} />
-        <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-[#15213A]/90 text-[10px] font-bold text-[#FFD66A] border border-[#33405A]">
+      <div className="h-56 w-full rounded-2xl overflow-hidden border border-[#33405A] mb-4 relative shadow-lg">
+        <MapView 
+          interactive={true} 
+          showCars={true} 
+          showControls={true} 
+          allowFullscreenToggle={true}
+        />
+        <div className="absolute top-2 left-2 z-20 px-2.5 py-1 rounded-full bg-[#15213A]/90 text-[10px] font-bold text-[#FFD66A] border border-[#33405A] shadow-md">
           Zona de alta demanda: Centro, Av. 25 de Mayo & Costanera
         </div>
       </div>

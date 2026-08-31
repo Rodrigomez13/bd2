@@ -100,13 +100,12 @@ export function App() {
   const handleStartRide = (dest?: LocationItem) => {
     if (dest) {
       setSelectedDestination(dest);
-      setCurrentScreen('select-ride');
-    } else {
-      setCurrentScreen('search');
     }
+    setCurrentScreen('search');
   };
 
-  const handleSelectDestination = (dest: LocationItem) => {
+  const handleConfirmTripPlan = (orig: LocationItem, dest: LocationItem) => {
+    setSelectedOrigin(orig);
     setSelectedDestination(dest);
     setCurrentScreen('select-ride');
   };
@@ -159,7 +158,6 @@ export function App() {
   const handleBack = () => {
     switch (currentScreen) {
       case 'search':
-      case 'select-ride':
       case 'driver-mode':
       case 'history':
       case 'payments':
@@ -169,6 +167,9 @@ export function App() {
       case 'admin-panel':
       case 'driver-onboarding':
         setCurrentScreen('home');
+        break;
+      case 'select-ride':
+        setCurrentScreen('search');
         break;
       case 'searching-driver':
         setCurrentScreen('select-ride');
@@ -337,7 +338,9 @@ export function App() {
 
           {currentScreen === 'search' && (
             <DestinationSearchScreen
-              onSelectDestination={handleSelectDestination}
+              initialOrigin={selectedOrigin}
+              initialDestination={selectedDestination}
+              onConfirmTripPlan={handleConfirmTripPlan}
               onBack={handleBack}
             />
           )}
