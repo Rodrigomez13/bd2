@@ -3,6 +3,7 @@ import { Compass, Minus, Plus, ShieldCheck } from 'lucide-react';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { LocationItem } from '../types';
+import { mapProviderLabel } from '../lib/mapProvider';
 
 interface MapViewProps {
   origin?: LocationItem | null;
@@ -19,6 +20,11 @@ interface MapViewProps {
 const FORMOSA: L.LatLngExpression = [-26.1775, -58.1781];
 const DESTINATION: L.LatLngExpression = [-26.171, -58.159];
 const DRIVER: L.LatLngExpression = [-26.182, -58.169];
+const DEMO_DRIVERS: L.LatLngExpression[] = [
+  [-26.168, -58.174],
+  [-26.185, -58.16],
+  [-26.178, -58.188],
+];
 
 const makeIcon = (color: string, label: string) => L.divIcon({
   className: 'bear-map-marker',
@@ -49,7 +55,14 @@ function MapControls({ zoom }: { zoom: number }) {
 
 export const MapView: React.FC<MapViewProps> = ({ origin, destination, driverApproaching = false, showCars = true, onMapClick, className = '', interactive = true }) => {
   const [zoom, setZoom] = useState(14);
-  const destinationPosition = useMemo(() => destination ? DESTINATION : null, [destination]);
+  const [driverTick, setDriverTick] = useState(0);
+  const destinationPosition = useMemo(() => destination ? [destination.lat, destination.lng] as L.LatLngExpression : null, [destination]);
+
+  useEffect(() => {
+    if (!showCars) return;
+    const interval = window.setInterval(() => setDriverTick((value) => value + 1), 5000);
+    return () => window.clearInterval(interval);
+  }, [showCars]);
 
   useEffect(() => {
     const handler = () => setZoom(14);
@@ -63,13 +76,17 @@ export const MapView: React.FC<MapViewProps> = ({ origin, destination, driverApp
         <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <MapClickHandler onMapClick={onMapClick} />
         {interactive && <MapControls zoom={zoom} />}
-        <Marker position={FORMOSA} icon={originIcon} title="Tu ubicación" />
+        <Marker position={origin ? [origin.lat, origin.lng] : FORMOSA} icon={originIcon} title="Tu ubicación" />
         {destinationPosition && <Marker position={destinationPosition} icon={destinationIcon} title={destination.name} />}
         {driverApproaching && <Marker position={DRIVER} icon={driverIcon} title="Conductor acercándose" />}
-        {showCars && <><Marker position={[-26.168, -58.174]} icon={driverIcon} /><Marker position={[-26.185, -58.16]} icon={driverIcon} /></>}
+        {showCars && DEMO_DRIVERS.map((position, index) => {
+          const [lat, lng] = position as [number, number];
+          const offset = ((driverTick + index) % 3 - 1) * 0.00035;
+          return <Marker key={`driver-${index}`} position={[lat + offset, lng - offset]} icon={driverIcon} title={`Conductor activo ${index + 1}`} />;
+        })}
       </MapContainer>
       <div className="absolute top-4 left-4 z-[1000] flex items-center gap-1.5 rounded-full border border-[#33405A] bg-[#15213A]/90 px-3 py-1.5 shadow-lg backdrop-blur-md">
-        <ShieldCheck className="h-4 w-4 text-[#59C878]" /><span className="text-[11px] font-semibold tracking-wide text-white">Mapa OpenStreetMap</span>
+        <ShieldCheck className="h-4 w-4 text-[#59C878]" /><span className="text-[11px] font-semibold tracking-wide text-white">{mapProviderLabel}</span>
       </div>
     </div>
   );
