@@ -395,13 +395,31 @@ export const MapView: React.FC<MapViewProps> = ({
     }
   }, [interactive]);
 
-  // Load Route coordinates when origin or destination changes
+  // Load Route coordinates when both origin and destination are present
   useEffect(() => {
     let isCancelled = false;
 
     async function loadRoute() {
-      const origCoords: [number, number] = origin ? [origin.lng, origin.lat] : [-58.1731, -26.1848];
-      const destCoords: [number, number] = destination ? [destination.lng, destination.lat] : [-58.1650, -26.1770];
+      if (!origin || !destination) {
+        setRouteCoordinates([]);
+        if (mapRef.current && mapLoaded) {
+          const source = mapRef.current.getSource('route') as mapboxgl.GeoJSONSource;
+          if (source) {
+            source.setData({
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: [],
+              },
+            });
+          }
+        }
+        return;
+      }
+
+      const origCoords: [number, number] = [origin.lng, origin.lat];
+      const destCoords: [number, number] = [destination.lng, destination.lat];
 
       const res = await getDirections(origCoords, destCoords);
       if (!isCancelled) {
@@ -436,8 +454,20 @@ export const MapView: React.FC<MapViewProps> = ({
       }
     }
 
-    if (origin || destination) {
+    if (origin && destination) {
       loadRoute();
+    } else if (mapLoaded && mapRef.current) {
+      const source = mapRef.current.getSource('route') as mapboxgl.GeoJSONSource;
+      if (source) {
+        source.setData({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: [],
+          },
+        });
+      }
     }
 
     return () => {

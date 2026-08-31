@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Home as HomeIcon, 
@@ -6,19 +6,27 @@ import {
   MapPin, 
   Zap, 
   ArrowRight, 
-  Star, 
   Tag, 
   Clock, 
   ShieldCheck, 
   ChevronRight, 
   LocateFixed, 
-  Sparkles
+  Sparkles,
+  Gift,
+  Award,
+  Layers,
+  X,
+  Check,
+  Compass
 } from 'lucide-react';
 import { MapView } from '../MapView';
 import { LocationItem, ScreenId } from '../../types';
 import { MOCK_LOCATIONS, RIDE_CATEGORIES } from '../../data/mockData';
 import { isSupabaseConfigured } from '../../services/supabaseClient';
 import { triggerHaptic } from '../../utils/haptics';
+import { PromosModal } from '../modals/PromosModal';
+import { BearPointsModal } from '../modals/BearPointsModal';
+import { ConceptualMapModal } from '../modals/ConceptualMapModal';
 
 interface HomeScreenProps {
   onStartRide: (destination?: LocationItem) => void;
@@ -37,15 +45,90 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const casa = MOCK_LOCATIONS.find((l) => l.id === 'loc-casa') || MOCK_LOCATIONS[0];
   const trabajo = MOCK_LOCATIONS.find((l) => l.id === 'loc-trabajo') || MOCK_LOCATIONS[1];
-  const costanera = MOCK_LOCATIONS.find((l) => l.id === 'loc-costanera') || MOCK_LOCATIONS[3];
   const isCloudOnline = isSupabaseConfigured();
 
+  // Selected destination directly from map click
+  const [tappedMapLocation, setTappedMapLocation] = useState<LocationItem | null>(null);
+
+  // Modals state
+  const [isPromosModalOpen, setIsPromosModalOpen] = useState(false);
+  const [isPointsModalOpen, setIsPointsModalOpen] = useState(false);
+  const [isConceptualModalOpen, setIsConceptualModalOpen] = useState(false);
+
+  // Floating rotating announcement messages
+  const [activeAnnouncementIndex, setActiveAnnouncementIndex] = useState(0);
+  const announcements = [
+    {
+      id: 'promo-1',
+      icon: '🎁',
+      badge: 'CUPÓN 20% OFF',
+      text: 'Código BEAR20 en tu primer viaje',
+      action: () => setIsPromosModalOpen(true),
+    },
+    {
+      id: 'speed-2',
+      icon: '⚡',
+      badge: 'BEARFLASH',
+      text: 'Llega en 2 min en Formosa Centro',
+      action: () => onStartRide(trabajo),
+    },
+    {
+      id: 'points-3',
+      icon: '⭐',
+      badge: '1.250 PTS',
+      text: 'Tenés BearPoints para canjear',
+      action: () => setIsPointsModalOpen(true),
+    },
+    {
+      id: 'security-4',
+      icon: '🛡️',
+      badge: 'SAS FORMOSA',
+      text: 'Conductores 100% habilitados',
+      action: () => setIsConceptualModalOpen(true),
+    },
+  ];
+
+  // Rotate announcement chip every 6 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveAnnouncementIndex((prev) => (prev + 1) % announcements.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [announcements.length]);
+
+  // Handle map click: user taps on map to set a destination!
+  const handleMapClick = (point: { lat: number; lng: number; name: string; address: string }) => {
+    triggerHaptic('medium');
+    const loc: LocationItem = {
+      id: `map-tap-${Date.now()}`,
+      name: point.name || 'Punto en el mapa',
+      address: point.address || `GPS: ${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}`,
+      city: 'Formosa',
+      lat: point.lat,
+      lng: point.lng,
+      type: 'recent',
+      category: 'Seleccionado en mapa',
+    };
+    setTappedMapLocation(loc);
+  };
+
+  const handleConfirmTappedRide = () => {
+    if (!tappedMapLocation) return;
+    triggerHaptic('heavy');
+    onStartRide(tappedMapLocation);
+    setTappedMapLocation(null);
+  };
+
+  const currentAnnouncement = announcements[activeAnnouncementIndex];
+
   return (
-    <div className="flex-1 flex flex-col bg-[#081226] text-white overflow-y-auto pb-24">
-      {/* Top Map Section (Responsive & non-colliding overlays) */}
-      <div className="relative h-[34vh] min-h-[230px] max-h-[320px] w-full shrink-0 overflow-hidden border-b border-[#33405A]/40">
+    <div className="flex-1 flex flex-col bg-[#081226] text-white overflow-y-auto pb-24 relative">
+      {/* Top Map Section - Clean, interactive without default address blocking */}
+      <div className="relative h-[38vh] min-h-[260px] max-h-[360px] w-full shrink-0 overflow-hidden border-b border-[#33405A]/40">
         <MapView 
           origin={currentOrigin} 
+          destination={tappedMapLocation}
+          onMapClick={handleMapClick}
           interactive={true} 
           showCars={true} 
           showControls={true}
@@ -55,9 +138,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         />
 
         {/* Gradient dark overlay on bottom of map */}
-        <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#081226] to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#081226] to-transparent pointer-events-none" />
 
-        {/* Top Floating User Greeting & GPS Status Bar */}
+        {/* Top Floating User Greeting & Status Bar */}
         <div className="absolute top-3 inset-x-3 flex items-center justify-between pointer-events-auto z-20">
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#15213A]/95 backdrop-blur-md border border-[#33405A] shadow-lg max-w-[62%]">
             <div className="w-6 h-6 rounded-full overflow-hidden border border-[#F5B51B] bg-[#081226] shrink-0">
@@ -88,55 +171,108 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <span className="text-[10px] font-bold text-[#59C878]">GPS Vivo</span>
             </div>
 
-            {/* Lightning Instant Request Button */}
+            {/* Floating Promos Button */}
             <button
               type="button"
               onClick={() => {
-                triggerHaptic('medium');
-                onStartRide(trabajo);
+                triggerHaptic('light');
+                setIsPromosModalOpen(true);
               }}
-              className="w-8 h-8 rounded-full bg-[#F5B51B] hover:bg-[#FFBE22] active:scale-95 text-[#081226] flex items-center justify-center shadow-[0_0_15px_rgba(245,181,27,0.5)] border border-white/40 transition-transform cursor-pointer"
-              title="Pedir BearFlash rápido al destino habitual"
+              className="w-8 h-8 rounded-full bg-[#15213A]/95 backdrop-blur-md border border-[#F5B51B]/60 text-[#F5B51B] flex items-center justify-center shadow-lg active:scale-95 transition-transform cursor-pointer relative"
+              title="Ver Promos y Cupones"
             >
-              <Zap className="w-3.5 h-3.5 fill-[#081226] stroke-[#081226]" />
+              <Gift className="w-3.5 h-3.5" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#F5B51B] animate-pulse" />
             </button>
           </div>
         </div>
 
-        {/* Floating Current Location Pill */}
-        {currentOrigin && (
-          <div className="absolute bottom-2 inset-x-3 z-20 flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#0D1930]/95 backdrop-blur-md border border-[#F5B51B]/40 shadow-xl pointer-events-auto">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-5 h-5 rounded-full bg-[#F5B51B]/20 border border-[#F5B51B] flex items-center justify-center text-[#F5B51B] shrink-0">
-                <LocateFixed className="w-3 h-3" />
+        {/* Floating Announcement / Promo Message Chip on Map */}
+        <div className="absolute top-14 inset-x-3 z-20 flex justify-center pointer-events-auto">
+          <div
+            onClick={() => {
+              triggerHaptic('light');
+              currentAnnouncement.action();
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0D1930]/90 backdrop-blur-md border border-[#F5B51B]/40 shadow-lg cursor-pointer hover:border-[#F5B51B] transition-all active:scale-95 group max-w-full"
+          >
+            <span className="text-xs">{currentAnnouncement.icon}</span>
+            <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-[#F5B51B] text-[#081226] tracking-wider">
+              {currentAnnouncement.badge}
+            </span>
+            <span className="text-[11px] font-bold text-white group-hover:text-[#F5B51B] truncate transition-colors">
+              {currentAnnouncement.text}
+            </span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#F5B51B] shrink-0" />
+          </div>
+        </div>
+
+        {/* Floating Tapped Map Destination Emergent Card */}
+        {tappedMapLocation && (
+          <div className="absolute bottom-2 inset-x-2.5 z-30 p-3 rounded-2xl bg-[#0D1930]/95 backdrop-blur-md border-2 border-[#F5B51B] shadow-2xl flex flex-col gap-2 pointer-events-auto animate-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-xl bg-[#15213A] border border-[#F5B51B] flex items-center justify-center text-[#F5B51B] shrink-0 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[9px] uppercase font-extrabold text-[#F5B51B] tracking-wider leading-none">
+                    Punto marcado en mapa
+                  </span>
+                  <span className="text-xs font-bold text-white truncate mt-0.5">
+                    {tappedMapLocation.name}
+                  </span>
+                  <span className="text-[10px] text-[#AEB7C8] truncate">
+                    {tappedMapLocation.address}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[9px] text-[#AEB7C8] uppercase font-bold tracking-wider leading-none">
-                  Ubicación actual en Formosa
-                </span>
-                <span className="text-xs font-bold text-white truncate">
-                  {currentOrigin.name || currentOrigin.address}
-                </span>
-              </div>
-            </div>
-            {onRefreshGPS && (
+
               <button
                 type="button"
                 onClick={() => {
                   triggerHaptic('light');
-                  onRefreshGPS();
+                  setTappedMapLocation(null);
                 }}
-                className="text-[10px] text-[#F5B51B] hover:underline font-bold shrink-0 ml-2 cursor-pointer"
+                className="p-1 text-[#AEB7C8] hover:text-white cursor-pointer"
+                title="Desmarcar"
               >
-                Actualizar
+                <X className="w-4 h-4" />
               </button>
-            )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTappedMapLocation(null)}
+                className="px-3 py-2 rounded-xl bg-[#15213A] border border-[#33405A] text-[#AEB7C8] hover:text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmTappedRide}
+                className="flex-1 bg-[#F5B51B] hover:bg-[#FFBE22] active:scale-95 text-[#081226] font-black py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all"
+              >
+                <span>Pedir viaje aquí</span>
+                <ArrowRight className="w-3.5 h-3.5 stroke-[3]" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Map interaction tip hint (if not tapped) */}
+        {!tappedMapLocation && (
+          <div className="absolute bottom-2 inset-x-4 z-10 flex justify-center pointer-events-none">
+            <span className="text-[10px] text-[#AEB7C8] bg-[#081226]/80 backdrop-blur-sm px-3 py-1 rounded-full border border-[#33405A]/40 font-medium">
+              Tocá cualquier punto del mapa para fijar destino
+            </span>
           </div>
         )}
       </div>
 
-      {/* Main Content Section */}
-      <div className="px-3.5 pt-3 flex flex-col gap-3.5">
+      {/* Main Controls & Search Section */}
+      <div className="px-3.5 pt-3 flex flex-col gap-3">
         {/* Search destination trigger bar */}
         <div
           onClick={() => {
@@ -159,52 +295,49 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
-        {/* Live Connectivity Banner */}
-        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#0D1930] border border-[#33405A] text-[10px]">
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#59C878]" />
-            <span className="text-[#AEB7C8]">
-              Supabase: <strong className="text-white">{isCloudOnline ? 'Cloud Sync Online' : 'Modo Offline'}</strong>
-            </span>
-          </div>
-          <span className="text-[#F5B51B] font-bold">Mapbox Vector v5</span>
-        </div>
-
-        {/* Ecosystem & BearPoints Navigation Pills */}
-        <div className="grid grid-cols-2 gap-2">
-          <div
+        {/* Floating Shortcuts Pills Row (Emergent Modals Triggers) */}
+        <div className="grid grid-cols-3 gap-2">
+          {/* Promos Pill */}
+          <button
+            type="button"
             onClick={() => {
               triggerHaptic('light');
-              onNavigate('conceptual-map');
+              setIsPromosModalOpen(true);
             }}
-            className="p-2.5 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#F5B51B]/40 cursor-pointer transition-all flex items-center gap-2 shadow-md group active:scale-[0.98]"
+            className="p-2 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#F5B51B]/40 cursor-pointer transition-all flex flex-col items-center justify-center text-center shadow-sm active:scale-95"
           >
-            <div className="w-7 h-7 rounded-xl bg-[#081226] border border-[#F5B51B] flex items-center justify-center text-xs shrink-0">
-              🗺️
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold text-white group-hover:text-[#F5B51B] transition-colors truncate">
-                Mapa Conceptual
-              </span>
-              <span className="text-[9px] text-[#AEB7C8] truncate">8 Pilares de Negocio</span>
-            </div>
-          </div>
+            <span className="text-base mb-0.5">🎁</span>
+            <span className="text-[11px] font-bold text-white">Promos</span>
+            <span className="text-[9px] text-[#F5B51B] font-extrabold">-20% OFF</span>
+          </button>
 
-          <div
+          {/* BearPoints Pill */}
+          <button
+            type="button"
             onClick={() => {
               triggerHaptic('light');
-              onNavigate('bear-points');
+              setIsPointsModalOpen(true);
             }}
-            className="p-2.5 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#59C878]/40 cursor-pointer transition-all flex items-center gap-2 shadow-md group active:scale-[0.98]"
+            className="p-2 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#59C878]/40 cursor-pointer transition-all flex flex-col items-center justify-center text-center shadow-sm active:scale-95"
           >
-            <div className="w-7 h-7 rounded-xl bg-[#081226] border border-[#59C878] flex items-center justify-center text-xs shrink-0">
-              🎁
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-bold text-[#59C878] truncate">1.250 BearPoints</span>
-              <span className="text-[9px] text-[#AEB7C8] truncate">Canjear premios</span>
-            </div>
-          </div>
+            <span className="text-base mb-0.5">⭐</span>
+            <span className="text-[11px] font-bold text-white">Puntos</span>
+            <span className="text-[9px] text-[#59C878] font-bold">1.250 pts</span>
+          </button>
+
+          {/* Pillars & Architecture Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('light');
+              setIsConceptualModalOpen(true);
+            }}
+            className="p-2 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B]/50 cursor-pointer transition-all flex flex-col items-center justify-center text-center shadow-sm active:scale-95"
+          >
+            <span className="text-base mb-0.5">🗺️</span>
+            <span className="text-[11px] font-bold text-white">Pilares</span>
+            <span className="text-[9px] text-[#AEB7C8]">SAS Formosa</span>
+          </button>
         </div>
 
         {/* Quick Favorite Destinations Grid (Casa / Trabajo) */}
@@ -244,36 +377,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </button>
         </div>
 
-        {/* Promo Launch Banner */}
-        <div
-          onClick={() => {
-            triggerHaptic('light');
-            onNavigate('promos');
-          }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#15213A] via-[#202D47] to-[#15213A] border border-[#F5B51B]/40 p-3.5 shadow-xl cursor-pointer group active:scale-[0.99]"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-[#F5B51B] text-[#081226]">
-                  PROMO
-                </span>
-                <span className="text-xs text-[#FFD66A] font-semibold">Código: BEAR20</span>
-              </div>
-              <h3 className="text-sm font-black text-white mt-1">20% OFF en tu primer viaje</h3>
-              <p className="text-[10px] text-[#AEB7C8] truncate">Válido en toda Formosa • Tocá para ver promos</p>
-            </div>
-            <div className="w-10 h-10 rounded-2xl bg-[#081226] border border-[#F5B51B] flex items-center justify-center text-xl shadow-inner shrink-0 group-hover:scale-105 transition-transform ml-2">
-              🐻
-            </div>
-          </div>
-        </div>
-
         {/* Ride Categories Quick Selection Cards */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#AEB7C8]">
-              Elegí tu categoría
+              Categorías de Viaje
             </h3>
             <button
               type="button"
@@ -283,7 +391,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               }}
               className="text-xs font-semibold text-[#F5B51B] hover:underline flex items-center gap-1 cursor-pointer"
             >
-              Ver todas <ChevronRight className="w-3.5 h-3.5" />
+              Ver tarifas <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -293,7 +401,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 key={cat.id}
                 onClick={() => {
                   triggerHaptic('selection');
-                  onStartRide(costanera);
+                  onStartRide(casa);
                 }}
                 className="bg-[#15213A] hover:bg-[#202D47] border border-[#33405A] hover:border-[#F5B51B] rounded-xl p-2.5 cursor-pointer transition-all flex flex-col justify-between active:scale-[0.98]"
               >
@@ -335,6 +443,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <ArrowRight className="w-4 h-4 stroke-[3]" />
         </button>
       </div>
+
+      {/* Emergent Modals */}
+      <PromosModal
+        isOpen={isPromosModalOpen}
+        onClose={() => setIsPromosModalOpen(false)}
+        onApplyPromo={(code) => {
+          onNavigate('select-ride');
+        }}
+      />
+
+      <BearPointsModal
+        isOpen={isPointsModalOpen}
+        onClose={() => setIsPointsModalOpen(false)}
+        onApplyReward={(reward) => {
+          onNavigate('select-ride');
+        }}
+      />
+
+      <ConceptualMapModal
+        isOpen={isConceptualModalOpen}
+        onClose={() => setIsConceptualModalOpen(false)}
+      />
     </div>
   );
 };

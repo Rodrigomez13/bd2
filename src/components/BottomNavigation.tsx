@@ -6,6 +6,7 @@ import { BearMascotIcon } from './BearLogo';
 interface BottomNavigationProps {
   currentScreen: ScreenId;
   onNavigate: (screen: ScreenId) => void;
+  onOpenQuickSearch?: () => void;
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({
