@@ -1,36 +1,59 @@
 import React from 'react';
-import { Search, Home as HomeIcon, Briefcase, MapPin, Zap, ArrowRight, Star, Tag, Clock, ShieldCheck, ChevronRight } from 'lucide-react';
+import { 
+  Search, 
+  Home as HomeIcon, 
+  Briefcase, 
+  MapPin, 
+  Zap, 
+  ArrowRight, 
+  Star, 
+  Tag, 
+  Clock, 
+  ShieldCheck, 
+  ChevronRight, 
+  LocateFixed, 
+  CloudCheck, 
+  Radio, 
+  Sparkles,
+  Database
+} from 'lucide-react';
 import { MapView } from '../MapView';
 import { BearLogo, BearMascotIcon } from '../BearLogo';
 import { LocationItem, RideCategory, ScreenId } from '../../types';
 import { MOCK_LOCATIONS, RIDE_CATEGORIES } from '../../data/mockData';
+import { isSupabaseConfigured } from '../../services/supabaseClient';
 
 interface HomeScreenProps {
   onStartRide: (destination?: LocationItem) => void;
   onNavigate: (screen: ScreenId) => void;
   userName: string;
+  currentOrigin?: LocationItem;
+  onRefreshGPS?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartRide,
   onNavigate,
   userName = 'Martín',
+  currentOrigin,
+  onRefreshGPS,
 }) => {
   const casa = MOCK_LOCATIONS.find((l) => l.id === 'loc-casa') || MOCK_LOCATIONS[0];
   const trabajo = MOCK_LOCATIONS.find((l) => l.id === 'loc-trabajo') || MOCK_LOCATIONS[1];
   const costanera = MOCK_LOCATIONS.find((l) => l.id === 'loc-costanera') || MOCK_LOCATIONS[3];
   const aeropuerto = MOCK_LOCATIONS.find((l) => l.id === 'loc-aeropuerto') || MOCK_LOCATIONS[4];
+  const isCloudOnline = isSupabaseConfigured();
 
   return (
     <div className="relative min-h-[640px] flex flex-col bg-[#081226] text-white">
       {/* Top Half: Night Illuminated Map Header with floating greeting & Flash Action */}
       <div className="relative h-72 w-full overflow-hidden border-b border-[#33405A]/40">
-        <MapView interactive={false} showCars={true} />
+        <MapView origin={currentOrigin} interactive={false} showCars={true} />
 
         {/* Gradient dark overlay on bottom of map for smooth blending */}
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#081226] via-[#081226]/80 to-transparent pointer-events-none" />
 
-        {/* Top Floating User Greeting */}
+        {/* Top Floating User Greeting & Real-time Connectivity Status */}
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-auto">
           <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-[#15213A]/90 backdrop-blur-md border border-[#33405A] shadow-lg">
             <div className="w-7 h-7 rounded-full overflow-hidden border border-[#F5B51B] bg-[#081226]">
@@ -47,27 +70,60 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
           </div>
 
-          {/* Quick Flash / Lightning Instant Request Button */}
-          <button
-            type="button"
-            onClick={() => onStartRide(trabajo)}
-            className="w-11 h-11 rounded-full bg-[#F5B51B] hover:bg-[#FFBE22] active:scale-95 text-[#081226] flex items-center justify-center shadow-[0_0_20px_rgba(245,181,27,0.5)] border-2 border-white/40 transition-transform cursor-pointer"
-            title="Pedir BearFlash rápido al destino habitual"
-          >
-            <Zap className="w-6 h-6 fill-[#081226] stroke-[#081226]" />
-          </button>
-        </div>
+          <div className="flex items-center gap-2">
+            {/* Live Satellite GPS Status Badge */}
+            <div 
+              onClick={onRefreshGPS}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#15213A]/90 backdrop-blur-md border border-[#59C878]/50 shadow-md cursor-pointer hover:bg-[#202D47] transition-all"
+              title="GPS Satelital Activo • Tocá para actualizar ubicación"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#59C878] animate-ping" />
+              <span className="text-[10px] font-bold text-[#59C878]">GPS Vivo</span>
+            </div>
 
-        {/* Center Target Radar Icon overlay */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-          <div className="w-12 h-12 rounded-full border-2 border-[#F5B51B] bg-[#F5B51B]/20 flex items-center justify-center shadow-[0_0_20px_rgba(245,181,27,0.4)] animate-pulse">
-            <div className="w-4 h-4 rounded-full bg-[#F5B51B]" />
+            {/* Quick Flash / Lightning Instant Request Button */}
+            <button
+              type="button"
+              onClick={() => onStartRide(trabajo)}
+              className="w-10 h-10 rounded-full bg-[#F5B51B] hover:bg-[#FFBE22] active:scale-95 text-[#081226] flex items-center justify-center shadow-[0_0_20px_rgba(245,181,27,0.5)] border-2 border-white/40 transition-transform cursor-pointer"
+              title="Pedir BearFlash rápido al destino habitual"
+            >
+              <Zap className="w-5 h-5 fill-[#081226] stroke-[#081226]" />
+            </button>
           </div>
         </div>
+
+        {/* Floating Current Location Pill */}
+        {currentOrigin && (
+          <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between px-3.5 py-2 rounded-2xl bg-[#0D1930]/95 backdrop-blur-md border border-[#F5B51B]/50 shadow-xl pointer-events-auto">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-6 h-6 rounded-full bg-[#F5B51B]/20 border border-[#F5B51B] flex items-center justify-center text-[#F5B51B] shrink-0">
+                <LocateFixed className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] text-[#AEB7C8] uppercase font-bold tracking-wider leading-none">
+                  Ubicación actual en Formosa
+                </span>
+                <span className="text-xs font-bold text-white truncate">
+                  {currentOrigin.name || currentOrigin.address}
+                </span>
+              </div>
+            </div>
+            {onRefreshGPS && (
+              <button
+                type="button"
+                onClick={onRefreshGPS}
+                className="text-[10px] text-[#F5B51B] hover:underline font-bold shrink-0 ml-2"
+              >
+                Actualizar
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom Main Content Card (Overlapping map) */}
-      <div className="relative z-10 -mt-6 px-4 pb-8 flex flex-col gap-4">
+      <div className="relative z-10 -mt-2 px-4 pb-8 flex flex-col gap-4">
         {/* Search destination trigger bar */}
         <div
           onClick={() => onNavigate('search')}
@@ -79,12 +135,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
             <div className="flex flex-col text-left">
               <span className="text-base font-bold text-white tracking-tight">¿A dónde vamos?</span>
-              <span className="text-xs text-[#AEB7C8]">Elegí tu destino en Formosa</span>
+              <span className="text-xs text-[#AEB7C8]">Elegí tu destino en Formosa con Mapbox</span>
             </div>
           </div>
           <div className="w-8 h-8 rounded-full bg-[#202D47] flex items-center justify-center text-[#AEB7C8] group-hover:text-[#F5B51B]">
             <Clock className="w-4 h-4" />
           </div>
+        </div>
+
+        {/* Live Connectivity Banner: Supabase Cloud & Mapbox Engine */}
+        <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-[#0D1930] border border-[#33405A] text-[11px]">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#59C878]" />
+            <span className="text-[#AEB7C8]">
+              Supabase Database: <strong className="text-white">{isCloudOnline ? 'Conectado (Cloud Sync)' : 'Modo Offline Resiliente'}</strong>
+            </span>
+          </div>
+          <span className="text-[#F5B51B] font-bold">Mapbox Vector v5</span>
         </div>
 
         {/* Ecosystem & BearPoints Navigation Pills */}

@@ -196,9 +196,11 @@ export async function searchPlaces(query: string): Promise<GeocodedPlace[]> {
 
   try {
     const proximity = `${FORMOSA_CENTER[0]},${FORMOSA_CENTER[1]}`;
+    // Bounding box around Formosa province & city for maximum relevance
+    const bbox = `-60.5,-27.0,-57.5,-25.5`;
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
       trimmed
-    )}.json?country=AR&proximity=${proximity}&types=address,poi,place,neighborhood&access_token=${token}`;
+    )}.json?country=AR&proximity=${proximity}&bbox=${bbox}&types=address,poi,place,neighborhood,locality&language=es&access_token=${token}`;
 
     const response = await fetch(url);
     if (response.ok) {
@@ -206,21 +208,54 @@ export async function searchPlaces(query: string): Promise<GeocodedPlace[]> {
       if (data.features && data.features.length > 0) {
         return data.features.map((f: any) => {
           const [lng, lat] = f.center || f.geometry?.coordinates || FORMOSA_CENTER;
-          const address = f.properties?.address || f.place_name || '';
+          const fullPlaceName = f.place_name || f.text || '';
+          // Clean up standard Mapbox Argentina suffixes for UI elegance
+          const cleanAddress = fullPlaceName
+            .replace(', Formosa, Argentina', '')
+            .replace(', Departamento Formosa', '')
+            .replace(', Argentina', '');
+
           return {
             id: f.id || `mb-${Math.random()}`,
-            name: f.text || f.place_name.split(',')[0],
-            address: f.place_name || address,
+            name: f.text || fullPlaceName.split(',')[0],
+            address: cleanAddress || fullPlaceName,
             city: 'Formosa, Argentina',
             lat,
             lng,
-            category: f.properties?.category || 'Dirección',
+            category: f.properties?.category || (f.place_type ? f.place_type[0] : 'Dirección'),
           };
         });
       }
     }
   } catch (err: any) {
     console.warn('Mapbox geocoding notice:', err?.message || 'Using local POIs fallback');
+  }
+
+  // If strict bbox yielded nothing, retry with broad Argentina proximity
+  try {
+    const broadUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+      trimmed
+    )}.json?country=AR&proximity=${FORMOSA_CENTER[0]},${FORMOSA_CENTER[1]}&language=es&access_token=${token}`;
+    const response = await fetch(broadUrl);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        return data.features.slice(0, 5).map((f: any) => {
+          const [lng, lat] = f.center || f.geometry?.coordinates || FORMOSA_CENTER;
+          return {
+            id: f.id || `mb-${Math.random()}`,
+            name: f.text || f.place_name.split(',')[0],
+            address: f.place_name,
+            city: 'Argentina',
+            lat,
+            lng,
+            category: f.properties?.category || 'Lugar',
+          };
+        });
+      }
+    }
+  } catch {
+    // fallback
   }
 
   return [];

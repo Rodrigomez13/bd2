@@ -146,7 +146,7 @@ export interface PaymentMethod {
 export interface TripRecord {
   id: string;
   date: string;
-  time: string;
+  time?: string;
   origin: string;
   destination: string;
   category: string;
@@ -158,7 +158,13 @@ export interface TripRecord {
   carModel: string;
 }
 
+export type TripHistoryItem = TripRecord;
+export type DriverProfile = DriverInfo;
+
 export interface ActiveTripState {
+  id?: string;
+  createdAt?: string;
+  rideType?: string;
   origin: LocationItem;
   destination: LocationItem;
   category: RideCategory;
@@ -167,9 +173,9 @@ export interface ActiveTripState {
   driver: DriverInfo;
   paymentMethod: PaymentMethod;
   promoCode?: string;
-  status: 'searching' | 'driver_assigned' | 'in_transit' | 'arrived';
-  progress: number; // 0 to 100
-  currentInstruction: string;
-  etaMinutes: number;
-  distanceKm: number;
+  status: 'searching' | 'driver_assigned' | 'driver-assigned' | 'in_transit' | 'in-progress' | 'arrived' | 'completed';
+  progress?: number; // 0 to 100
+  currentInstruction?: string;
+  etaMinutes?: number;
+  distanceKm?: number;
 }

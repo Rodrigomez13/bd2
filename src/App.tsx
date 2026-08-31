@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TopBar } from './components/TopBar';
 import { BottomNavigation } from './components/BottomNavigation';
 import { LoginScreen } from './components/screens/LoginScreen';
@@ -25,6 +25,8 @@ import { ScreenId, LocationItem, RideCategory, PaymentMethod, DriverInfo, Active
 import { MOCK_LOCATIONS, RIDE_CATEGORIES, PAYMENT_METHODS, MOCK_DRIVERS, INITIAL_USER } from './data/mockData';
 import { triggerHaptic } from './utils/haptics';
 import { Layers, ShieldAlert, Sparkles, CheckCircle2, Info } from 'lucide-react';
+import { watchGPSPosition, getCurrentGPSPosition } from './services/geolocationService';
+import { syncCreateTrip, syncUpdateTripStatus } from './services/supabaseClient';
 
 export function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
@@ -38,6 +40,42 @@ export function App() {
   const showToast = (text: string, type: 'info' | 'success' = 'info') => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Real-time GPS device tracking subscription
+  useEffect(() => {
+    const unwatch = watchGPSPosition(
+      ({ locationItem }) => {
+        setSelectedOrigin(locationItem);
+      },
+      (err) => {
+        console.info('GPS Live status:', err.message);
+      }
+    );
+
+    // Instant initial GPS lookup
+    getCurrentGPSPosition()
+      .then(({ locationItem }) => {
+        setSelectedOrigin(locationItem);
+      })
+      .catch(() => {
+        // Fallback remains active gracefully
+      });
+
+    return () => {
+      unwatch();
+    };
+  }, []);
+
+  const handleRefreshGPS = async () => {
+    triggerHaptic('medium');
+    try {
+      const { locationItem } = await getCurrentGPSPosition();
+      setSelectedOrigin(locationItem);
+      showToast('Ubicación GPS actualizada con éxito', 'success');
+    } catch {
+      showToast('Ubicación actual en Formosa Centro');
+    }
   };
 
   // Active trip state
@@ -77,7 +115,7 @@ export function App() {
     const discount = promoCode ? Math.round(category.basePrice * 0.2) : 0;
     const finalPrice = category.basePrice - discount;
 
-    setActiveTrip({
+    const newTrip: ActiveTripState = {
       id: `trip-${Date.now()}`,
       origin: selectedOrigin,
       destination: selectedDestination,
@@ -87,20 +125,30 @@ export function App() {
       status: 'searching',
       paymentMethod: payment,
       discount,
+    };
+
+    setActiveTrip(newTrip);
+
+    // Persistent synchronization with Supabase & Local Database
+    syncCreateTrip(newTrip).catch((err) => {
+      console.warn('Trip sync note:', err.message);
     });
 
     setCurrentScreen('searching-driver');
   };
 
   const handleDriverFound = () => {
+    syncUpdateTripStatus(activeTrip.id, 'driver-assigned');
     setCurrentScreen('driver-found');
   };
 
   const handleStartActiveTrip = () => {
+    syncUpdateTripStatus(activeTrip.id, 'in-progress');
     setCurrentScreen('active-trip');
   };
 
   const handleFinishTrip = () => {
+    syncUpdateTripStatus(activeTrip.id, 'completed');
     setCurrentScreen('trip-finished');
   };
 
@@ -280,6 +328,8 @@ export function App() {
           {currentScreen === 'home' && (
             <HomeScreen
               userName="Martín"
+              currentOrigin={selectedOrigin}
+              onRefreshGPS={handleRefreshGPS}
               onStartRide={handleStartRide}
               onNavigate={(screen) => setCurrentScreen(screen)}
             />

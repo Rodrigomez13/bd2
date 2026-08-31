@@ -22,11 +22,14 @@ import {
   TrendingUp, 
   Clock, 
   ChevronRight,
-  Compass
+  Compass,
+  Crosshair,
+  LocateFixed
 } from 'lucide-react';
 import { LocationItem } from '../../types';
 import { MOCK_LOCATIONS, MOCK_TRIP_HISTORY } from '../../data/mockData';
-import { searchPlaces, GeocodedPlace, FORMOSA_CENTER } from '../../services/mapboxService';
+import { searchPlaces, GeocodedPlace, FORMOSA_CENTER, reverseGeocode } from '../../services/mapboxService';
+import { getCurrentGPSPosition, UserLiveCoordinates } from '../../services/geolocationService';
 import { MapView } from '../MapView';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -46,6 +49,8 @@ export const DestinationSearchScreen: React.FC<DestinationSearchScreenProps> = (
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('all');
   const [isMapPickerMode, setIsMapPickerMode] = useState(false);
+  const [isLocatingGPS, setIsLocatingGPS] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
   const [pickedLocation, setPickedLocation] = useState<LocationItem>({
     id: 'picked-1',
     name: 'Costanera Vuelta Fermosa',
@@ -192,6 +197,21 @@ export const DestinationSearchScreen: React.FC<DestinationSearchScreenProps> = (
       category: 'Geolocalizado',
     };
     handleSelectLocation(loc);
+  };
+
+  const handleUseLiveGPS = async () => {
+    triggerHaptic('medium');
+    setIsLocatingGPS(true);
+    setGpsError(null);
+    try {
+      const { locationItem } = await getCurrentGPSPosition();
+      handleSelectLocation(locationItem);
+    } catch (err: any) {
+      setGpsError(err.message || 'No se pudo obtener la posición GPS.');
+      setTimeout(() => setGpsError(null), 4000);
+    } finally {
+      setIsLocatingGPS(false);
+    }
   };
 
   const handleMapClick = (point: { lat: number; lng: number; name: string; address: string }) => {
@@ -349,7 +369,7 @@ export const DestinationSearchScreen: React.FC<DestinationSearchScreenProps> = (
           </div>
 
           {/* Golden Search Input Box with Mapbox Geocoding */}
-          <div className="relative mb-3">
+          <div className="relative mb-2">
             <div className="relative flex items-center bg-[#0D1930] border-2 border-[#F5B51B] rounded-2xl px-3.5 py-3 shadow-[0_0_15px_rgba(245,181,27,0.2)]">
               {isSearchingMapbox ? (
                 <Loader2 className="w-5 h-5 text-[#F5B51B] mr-2.5 shrink-0 animate-spin" />
@@ -377,6 +397,35 @@ export const DestinationSearchScreen: React.FC<DestinationSearchScreenProps> = (
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Quick GPS Location Shortcut Bar */}
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={handleUseLiveGPS}
+              disabled={isLocatingGPS}
+              className="w-full py-2.5 px-3.5 rounded-xl bg-[#0D1930] hover:bg-[#15213A] border border-[#59C878]/50 hover:border-[#59C878] text-[#59C878] flex items-center justify-between text-xs font-bold transition-all shadow-sm active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                {isLocatingGPS ? (
+                  <Loader2 className="w-4 h-4 text-[#59C878] animate-spin" />
+                ) : (
+                  <LocateFixed className="w-4 h-4 text-[#59C878]" />
+                )}
+                <span>
+                  {isLocatingGPS
+                    ? 'Obteniendo coordenadas satelitales...'
+                    : 'Usar mi ubicación GPS en tiempo real'}
+                </span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#15213A] text-[#AEB7C8] border border-[#33405A]">
+                GPS Real
+              </span>
+            </button>
+            {gpsError && (
+              <p className="text-[11px] text-red-400 mt-1 px-1">{gpsError}</p>
+            )}
           </div>
 
           {/* Quick-Access Shortcuts: Casa 🏠 & Trabajo 💼 (Top Priority) */}

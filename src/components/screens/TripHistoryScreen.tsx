@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Clock, Calendar, CheckCircle2, ArrowRight, FileText, Download, Star, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, Calendar, CheckCircle2, ArrowRight, FileText, Download, Star, MapPin, RefreshCw, Loader2, CloudCheck, Database } from 'lucide-react';
 import { MOCK_TRIP_HISTORY } from '../../data/mockData';
 import { TripRecord } from '../../types';
+import { fetchTripHistory, isSupabaseConfigured } from '../../services/supabaseClient';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface TripHistoryScreenProps {
   onBack: () => void;
@@ -10,13 +12,60 @@ interface TripHistoryScreenProps {
 export const TripHistoryScreen: React.FC<TripHistoryScreenProps> = ({ onBack }) => {
   const [tab, setTab] = useState<'history' | 'upcoming'>('history');
   const [selectedReceipt, setSelectedReceipt] = useState<TripRecord | null>(null);
+  const [trips, setTrips] = useState<TripRecord[]>(MOCK_TRIP_HISTORY);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const isCloudOnline = isSupabaseConfigured();
+
+  const loadHistory = async () => {
+    setIsLoading(true);
+    try {
+      const records = await fetchTripHistory();
+      if (records && records.length > 0) {
+        setTrips(records);
+      }
+    } catch {
+      // Keep initial
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const handleRefresh = () => {
+    triggerHaptic('medium');
+    loadHistory();
+  };
 
   return (
     <div className="min-h-[640px] flex flex-col bg-[#081226] text-white p-4 overflow-y-auto">
       {/* Title & Tabs */}
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-white tracking-tight">Mis Viajes</h2>
-        <p className="text-xs text-[#AEB7C8] mt-0.5">Historial y recibos oficiales</p>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Mis Viajes</h2>
+          <p className="text-xs text-[#AEB7C8] mt-0.5">Historial y recibos oficiales</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="p-2 rounded-xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] text-[#F5B51B] cursor-pointer active:scale-95 transition-all"
+            title="Sincronizar historial con Supabase"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Cloud Persistence Status */}
+      <div className="mb-3 px-3 py-1.5 rounded-xl bg-[#15213A] border border-[#33405A] flex items-center justify-between text-[11px]">
+        <div className="flex items-center gap-1.5 text-[#AEB7C8]">
+          <span className="w-2 h-2 rounded-full bg-[#59C878]" />
+          <span>Base de datos: <strong className="text-white">{isCloudOnline ? 'Supabase Cloud (En línea)' : 'Local Sync (Offline Ready)'}</strong></span>
+        </div>
+        <span className="text-[10px] text-[#F5B51B] font-mono">Total: {trips.length} viajes</span>
       </div>
 
       {/* Tabs */}
@@ -28,7 +77,7 @@ export const TripHistoryScreen: React.FC<TripHistoryScreenProps> = ({ onBack }) 
             tab === 'history' ? 'bg-[#F5B51B] text-[#081226] shadow' : 'text-[#AEB7C8]'
           }`}
         >
-          Historial completado ({MOCK_TRIP_HISTORY.length})
+          Historial completado ({trips.length})
         </button>
         <button
           type="button"
@@ -44,54 +93,61 @@ export const TripHistoryScreen: React.FC<TripHistoryScreenProps> = ({ onBack }) 
       {/* Trips list */}
       {tab === 'history' ? (
         <div className="flex flex-col gap-3">
-          {MOCK_TRIP_HISTORY.map((trip) => (
-            <div
-              key={trip.id}
-              onClick={() => setSelectedReceipt(trip)}
-              className="p-4 rounded-2xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] cursor-pointer transition-all shadow-md flex flex-col gap-3 group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#0D1930] text-[#FFD66A] border border-[#33405A]">
-                    {trip.category}
-                  </span>
-                  <span className="text-xs text-[#AEB7C8]">{trip.date}</span>
-                </div>
-                <span className="text-base font-black text-[#F5B51B]">
-                  ${trip.price.toLocaleString('es-AR')}
-                </span>
-              </div>
-
-              {/* Route line */}
-              <div className="flex flex-col gap-1.5 text-xs">
-                <div className="flex items-start gap-2.5">
-                  <div className="w-2 h-2 rounded-full bg-[#F5B51B] mt-1 shrink-0" />
-                  <span className="text-white truncate">{trip.origin}</span>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <div className="w-2 h-2 rounded-full bg-[#FF4B4B] mt-1 shrink-0" />
-                  <span className="text-white font-bold truncate">{trip.destination}</span>
-                </div>
-              </div>
-
-              {/* Driver & Receipt Action */}
-              <div className="flex items-center justify-between pt-2 border-t border-[#33405A]/40 text-xs text-[#AEB7C8]">
-                <div className="flex items-center gap-2">
-                  <img
-                    src={trip.driverAvatar}
-                    alt={trip.driverName}
-                    referrerPolicy="no-referrer"
-                    className="w-6 h-6 rounded-full border border-[#33405A] object-cover"
-                  />
-                  <span>Conductor: {trip.driverName}</span>
-                </div>
-                <div className="flex items-center gap-1 text-[#F5B51B] font-semibold group-hover:underline">
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Ver recibo</span>
-                </div>
-              </div>
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center p-12 text-[#AEB7C8]">
+              <Loader2 className="w-8 h-8 text-[#F5B51B] animate-spin mb-2" />
+              <span className="text-xs">Sincronizando viajes desde Supabase...</span>
             </div>
-          ))}
+          ) : (
+            trips.map((trip) => (
+              <div
+                key={trip.id}
+                onClick={() => setSelectedReceipt(trip)}
+                className="p-4 rounded-2xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] cursor-pointer transition-all shadow-md flex flex-col gap-3 group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#0D1930] text-[#FFD66A] border border-[#33405A]">
+                      {trip.category}
+                    </span>
+                    <span className="text-xs text-[#AEB7C8]">{trip.date}</span>
+                  </div>
+                  <span className="text-base font-black text-[#F5B51B]">
+                    ${trip.price.toLocaleString('es-AR')}
+                  </span>
+                </div>
+
+                {/* Route line */}
+                <div className="flex flex-col gap-1.5 text-xs">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-2 h-2 rounded-full bg-[#F5B51B] mt-1 shrink-0" />
+                    <span className="text-white truncate">{trip.origin}</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-2 h-2 rounded-full bg-[#FF4B4B] mt-1 shrink-0" />
+                    <span className="text-white font-bold truncate">{trip.destination}</span>
+                  </div>
+                </div>
+
+                {/* Driver & Receipt Action */}
+                <div className="flex items-center justify-between pt-2 border-t border-[#33405A]/40 text-xs text-[#AEB7C8]">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={trip.driverAvatar}
+                      alt={trip.driverName}
+                      referrerPolicy="no-referrer"
+                      className="w-6 h-6 rounded-full border border-[#33405A] object-cover"
+                    />
+                    <span>Conductor: {trip.driverName}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[#F5B51B] font-semibold group-hover:underline">
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Ver recibo</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center p-12 text-center text-[#AEB7C8]">
