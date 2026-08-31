@@ -221,7 +221,7 @@ export function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#040914] text-[#F5F7FA] flex flex-col items-center justify-start p-0 sm:p-4 selection:bg-[#F5B51B] selection:text-[#081226]">
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-start p-0 sm:p-4 selection:bg-primary selection:text-primary-foreground">
       {/* Top Demo Bar / Screen Switcher Shortcut */}
       <div className="w-full max-w-md mb-2 px-2 hidden sm:flex items-center justify-between text-xs text-[#AEB7C8]">
         <div className="flex items-center gap-1.5 font-bold text-[#F5B51B]">

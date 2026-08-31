@@ -57,31 +57,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // Floating rotating announcement messages
   const [activeAnnouncementIndex, setActiveAnnouncementIndex] = useState(0);
-  const announcements = [
+  const announcements: { id: string; icon: React.ReactNode; badge: string; text: string; action: () => void }[] = [
     {
       id: 'promo-1',
-      icon: '🎁',
+      icon: <Gift className="w-3.5 h-3.5" aria-hidden="true" />,
       badge: 'CUPÓN 20% OFF',
       text: 'Código BEAR20 en tu primer viaje',
       action: () => setIsPromosModalOpen(true),
     },
     {
       id: 'speed-2',
-      icon: '⚡',
+      icon: <Zap className="w-3.5 h-3.5" aria-hidden="true" />,
       badge: 'BEARFLASH',
       text: 'Llega en 2 min en Formosa Centro',
       action: () => onStartRide(trabajo),
     },
     {
       id: 'points-3',
-      icon: '⭐',
+      icon: <Award className="w-3.5 h-3.5" aria-hidden="true" />,
       badge: '1.250 PTS',
       text: 'Tenés BearPoints para canjear',
       action: () => setIsPointsModalOpen(true),
     },
     {
       id: 'security-4',
-      icon: '🛡️',
+      icon: <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />,
       badge: 'SAS FORMOSA',
       text: 'Conductores 100% habilitados',
       action: () => setIsConceptualModalOpen(true),
@@ -145,9 +145,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#15213A]/95 backdrop-blur-md border border-[#33405A] shadow-lg max-w-[62%]">
             <div className="w-6 h-6 rounded-full overflow-hidden border border-[#F5B51B] bg-[#081226] shrink-0">
               <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                alt="Usuario"
-                referrerPolicy="no-referrer"
+                src="/assets/osito-formoseno.png"
+                alt="Avatar de Martín"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -306,7 +305,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }}
             className="p-2 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#F5B51B]/40 cursor-pointer transition-all flex flex-col items-center justify-center text-center shadow-sm active:scale-95"
           >
-            <span className="text-base mb-0.5">🎁</span>
+            <Gift className="w-4 h-4 mb-1 text-primary" aria-hidden="true" />
             <span className="text-[11px] font-bold text-white">Promos</span>
             <span className="text-[9px] text-[#F5B51B] font-extrabold">-20% OFF</span>
           </button>
@@ -320,7 +319,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }}
             className="p-2 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#59C878]/40 cursor-pointer transition-all flex flex-col items-center justify-center text-center shadow-sm active:scale-95"
           >
-            <span className="text-base mb-0.5">⭐</span>
+            <Award className="w-4 h-4 mb-1 text-[#59C878]" aria-hidden="true" />
             <span className="text-[11px] font-bold text-white">Puntos</span>
             <span className="text-[9px] text-[#59C878] font-bold">1.250 pts</span>
           </button>
@@ -334,7 +333,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             }}
             className="p-2 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B]/50 cursor-pointer transition-all flex flex-col items-center justify-center text-center shadow-sm active:scale-95"
           >
-            <span className="text-base mb-0.5">🗺️</span>
+            <Layers className="w-4 h-4 mb-1 text-primary" aria-hidden="true" />
             <span className="text-[11px] font-bold text-white">Pilares</span>
             <span className="text-[9px] text-[#AEB7C8]">SAS Formosa</span>
           </button>
