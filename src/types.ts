@@ -27,8 +27,11 @@ export interface LocationItem {
   city: string;
   lat: number;
   lng: number;
-  type: 'recent' | 'saved' | 'poi';
+  type: 'recent' | 'saved' | 'poi' | 'frequent';
   icon?: string;
+  frequencyCount?: number;
+  lastVisited?: string;
+  category?: string;
 }
 
 export type DriverPreference = 'none' | 'female_driver';
