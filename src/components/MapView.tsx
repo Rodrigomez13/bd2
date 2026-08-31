@@ -328,6 +328,14 @@ export const MapView: React.FC<MapViewProps> = ({
       map.on('error', (e) => {
         const msg = e?.error?.message || (typeof e === 'string' ? e : 'Mapbox resource loading notice');
         console.warn('Mapbox rendering notice:', msg);
+
+        // Mapbox emits token/style failures asynchronously, so they do not
+        // reach the constructor catch block. Show the local fallback instead
+        // of leaving an empty map container behind.
+        if (/access token|unauthorized|forbidden|style/i.test(msg)) {
+          setUseFallbackSvg(true);
+          setMapLoaded(false);
+        }
       });
 
       mapRef.current = map;
