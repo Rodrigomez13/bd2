@@ -1,6 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import { Compass, Navigation, Plus, Minus, ShieldCheck, Zap } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { 
+  Compass, 
+  Plus, 
+  Minus, 
+  ShieldCheck, 
+  Layers, 
+  Navigation2, 
+  Car, 
+  Sparkles, 
+  Eye, 
+  Key, 
+  Check, 
+  RefreshCw, 
+  LocateFixed
+} from 'lucide-react';
 import { LocationItem } from '../types';
+import { triggerHaptic } from '../utils/haptics';
+import { 
+  getMapboxToken, 
+  setCustomMapboxToken, 
+  getDirections, 
+  FORMOSA_CENTER, 
+  MAPBOX_STYLES, 
+  MapStyleKey, 
+  reverseGeocode, 
+  calculateBearing 
+} from '../services/mapboxService';
 
 interface MapViewProps {
   origin?: LocationItem | null;
@@ -9,9 +36,10 @@ interface MapViewProps {
   progress?: number; // 0 to 100
   driverApproaching?: boolean;
   showCars?: boolean;
-  onMapClick?: (coords: { x: number; y: number }) => void;
+  onMapClick?: (location: { lat: number; lng: number; name: string; address: string }) => void;
   className?: string;
   interactive?: boolean;
+  height?: string;
 }
 
 export const MapView: React.FC<MapViewProps> = ({
@@ -21,285 +49,626 @@ export const MapView: React.FC<MapViewProps> = ({
   progress = 0,
   driverApproaching = false,
   showCars = true,
+  onMapClick,
   className = '',
   interactive = true,
+  height = '100%',
 }) => {
-  const [zoom, setZoom] = useState(1);
-  const [pulse, setPulse] = useState(0);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPulse((p) => (p + 1) % 100);
-    }, 1500);
-    return () => clearInterval(interval);
-  }, []);
+  const originMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const driverMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const fleetMarkersRef = useRef<mapboxgl.Marker[]>([]);
 
-  // Route path coordinates in SVG space (0-400 x, 0-600 y)
-  // Origin approx at (100, 480), Destination approx at (300, 140)
-  const routePoints = [
-    { x: 100, y: 480 },
-    { x: 100, y: 380 },
-    { x: 170, y: 350 },
-    { x: 220, y: 260 },
-    { x: 260, y: 220 },
-    { x: 300, y: 140 },
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [useFallbackSvg, setUseFallbackSvg] = useState(false);
+  const [currentStyle, setCurrentStyle] = useState<MapStyleKey>('dark');
+  const [is3DMode, setIs3DMode] = useState(false);
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [tokenInput, setTokenInput] = useState('');
+  const [tokenSaved, setTokenSaved] = useState(false);
+  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
+
+  // Simulated fleet positions around Formosa Centro
+  const initialFleetCoords: [number, number][] = [
+    [-58.1720, -26.1825],
+    [-58.1810, -26.1890],
+    [-58.1690, -26.1770],
+    [-58.1780, -26.1920],
   ];
 
-  // Calculate current vehicle position based on progress
-  const getCarPosition = (pct: number) => {
-    const totalSegments = routePoints.length - 1;
-    const segmentIndex = Math.min(
-      Math.floor((pct / 100) * totalSegments),
-      totalSegments - 1
-    );
-    const segmentProgress = ((pct / 100) * totalSegments) % 1;
-    const p1 = routePoints[segmentIndex];
-    const p2 = routePoints[segmentIndex + 1] || p1;
+  // Helper to create custom HTML Marker element
+  const createMarkerElement = (type: 'origin' | 'destination' | 'driver' | 'fleet', label?: string) => {
+    const el = document.createElement('div');
+    el.className = 'bear-custom-marker cursor-pointer select-none';
 
-    const x = p1.x + (p2.x - p1.x) * segmentProgress;
-    const y = p1.y + (p2.y - p1.y) * segmentProgress;
-    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * (180 / Math.PI) + 90;
+    if (type === 'origin') {
+      el.innerHTML = `
+        <div class="relative flex flex-col items-center group">
+          <div class="w-7 h-7 rounded-full bg-[#F5B51B] border-2 border-[#081226] shadow-[0_0_15px_rgba(245,181,27,0.8)] flex items-center justify-center animate-pulse">
+            <div class="w-2.5 h-2.5 rounded-full bg-[#081226]"></div>
+          </div>
+          <div class="mt-1 px-2.5 py-1 rounded-full bg-[#15213A] border border-[#F5B51B] text-[10px] font-bold text-white shadow-xl whitespace-nowrap">
+            ${label || 'Tu ubicación'}
+          </div>
+        </div>
+      `;
+    } else if (type === 'destination') {
+      el.innerHTML = `
+        <div class="relative flex flex-col items-center group">
+          <div class="w-8 h-8 rounded-full bg-[#FF4B4B] border-2 border-white shadow-[0_0_15px_rgba(255,75,75,0.8)] flex items-center justify-center text-white font-black text-xs">
+            ★
+          </div>
+          <div class="mt-1 px-2.5 py-1 rounded-full bg-[#15213A] border border-[#33405A] text-[10px] font-bold text-[#F5B51B] shadow-xl whitespace-nowrap">
+            ${label || 'Destino'}
+          </div>
+        </div>
+      `;
+    } else if (type === 'driver') {
+      el.innerHTML = `
+        <div class="relative flex items-center justify-center" id="bear-live-driver-icon">
+          <div class="w-10 h-10 rounded-full bg-[#15213A] border-2 border-[#F5B51B] shadow-[0_0_20px_rgba(245,181,27,0.9)] flex items-center justify-center text-[#F5B51B]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"></path>
+              <circle cx="7" cy="17" r="2"></circle>
+              <path d="M9 17h6"></path>
+              <circle cx="17" cy="17" r="2"></circle>
+            </svg>
+          </div>
+        </div>
+      `;
+    } else {
+      // Fleet cars
+      el.innerHTML = `
+        <div class="w-6 h-6 rounded-full bg-[#15213A]/90 border border-[#F5B51B] shadow-md flex items-center justify-center opacity-85 hover:scale-125 transition-transform">
+          <div class="w-2 h-2 rounded-full bg-[#F5B51B]"></div>
+        </div>
+      `;
+    }
 
-    return { x, y, angle };
+    return el;
   };
 
-  // Driver approaching position (moving towards origin)
-  const approachingCar = {
-    x: 100 + (Math.sin(pulse * 0.1) * 30),
-    y: 430 - (pulse * 0.5),
-    angle: 180,
+  // Initialize Mapbox Map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    const token = getMapboxToken();
+    mapboxgl.accessToken = token;
+
+    try {
+      const map = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: MAPBOX_STYLES[currentStyle],
+        center: origin ? [origin.lng, origin.lat] : FORMOSA_CENTER,
+        zoom: 13.8,
+        pitch: is3DMode ? 55 : 0,
+        bearing: 0,
+        interactive: interactive,
+        attributionControl: false,
+      });
+
+      map.on('load', () => {
+        setMapLoaded(true);
+        setUseFallbackSvg(false);
+
+        // Add 3D building layers if in night mode
+        if (map.getSource('composite')) {
+          map.addLayer(
+            {
+              id: '3d-buildings',
+              source: 'composite',
+              'source-layer': 'building',
+              filter: ['==', 'extrude', 'true'],
+              type: 'fill-extrusion',
+              minzoom: 14,
+              paint: {
+                'fill-extrusion-color': '#0D1930',
+                'fill-extrusion-height': [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  14,
+                  0,
+                  15.05,
+                  ['get', 'height'],
+                ],
+                'fill-extrusion-base': [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  14,
+                  0,
+                  15.05,
+                  ['get', 'min_height'],
+                ],
+                'fill-extrusion-opacity': 0.7,
+              },
+            },
+            'road-label'
+          );
+        }
+
+        // Add route source & layer
+        map.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: [],
+            },
+          },
+        });
+
+        // Route Glow Layer
+        map.addLayer({
+          id: 'route-glow',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#F5B51B',
+            'line-width': 10,
+            'line-opacity': 0.35,
+            'line-blur': 4,
+          },
+        });
+
+        // Route Solid Golden Layer
+        map.addLayer({
+          id: 'route-line',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#F5B51B',
+            'line-width': 4.5,
+            'line-opacity': 0.95,
+          },
+        });
+
+        // Route Dash Overlay
+        map.addLayer({
+          id: 'route-dash',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#FFFFFF',
+            'line-width': 2,
+            'line-dasharray': [1, 2],
+            'line-opacity': 0.85,
+          },
+        });
+      });
+
+      // Handle map clicks for custom destinations
+      if (onMapClick) {
+        map.on('click', async (e) => {
+          const { lng, lat } = e.lngLat;
+          const geo = await reverseGeocode(lng, lat);
+          onMapClick({
+            lat,
+            lng,
+            name: geo.name,
+            address: geo.address,
+          });
+        });
+      }
+
+      map.on('error', (e) => {
+        // Only extract the message to prevent circular structure serialization errors from the map instance
+        const msg = e?.error?.message || (typeof e === 'string' ? e : 'Mapbox resource loading notice');
+        console.warn('Mapbox rendering notice:', msg);
+      });
+
+      mapRef.current = map;
+
+      return () => {
+        map.remove();
+        mapRef.current = null;
+      };
+    } catch (err: any) {
+      console.warn('Mapbox initialization fallback:', err?.message || String(err));
+      setUseFallbackSvg(true);
+    }
+  }, [currentStyle]);
+
+  // Load Route coordinates when origin or destination changes
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadRoute() {
+      const origCoords: [number, number] = origin ? [origin.lng, origin.lat] : [-58.1731, -26.1848];
+      const destCoords: [number, number] = destination ? [destination.lng, destination.lat] : [-58.1650, -26.1770];
+
+      const res = await getDirections(origCoords, destCoords);
+      if (!isCancelled) {
+        setRouteCoordinates(res.coordinates);
+
+        if (mapRef.current && mapLoaded) {
+          const source = mapRef.current.getSource('route') as mapboxgl.GeoJSONSource;
+          if (source) {
+            source.setData({
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: res.coordinates,
+              },
+            });
+          }
+
+          // Fit bounds smoothly to contain both origin and destination
+          if (res.coordinates.length > 1) {
+            const bounds = res.coordinates.reduce(
+              (b, coord) => b.extend(coord),
+              new mapboxgl.LngLatBounds(res.coordinates[0], res.coordinates[0])
+            );
+            mapRef.current.fitBounds(bounds, {
+              padding: { top: 70, bottom: 90, left: 50, right: 50 },
+              maxZoom: 15.5,
+              duration: 1200,
+            });
+          }
+        }
+      }
+    }
+
+    if (origin || destination) {
+      loadRoute();
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [origin, destination, mapLoaded]);
+
+  // Update Markers
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return;
+    const map = mapRef.current;
+
+    // 1. Origin Marker
+    const origLngLat: [number, number] = origin ? [origin.lng, origin.lat] : [-58.1731, -26.1848];
+    if (originMarkerRef.current) {
+      originMarkerRef.current.setLngLat(origLngLat);
+    } else {
+      const el = createMarkerElement('origin', origin?.name || 'Tu ubicación');
+      originMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        .setLngLat(origLngLat)
+        .addTo(map);
+    }
+
+    // 2. Destination Marker
+    if (destination) {
+      const destLngLat: [number, number] = [destination.lng, destination.lat];
+      if (destMarkerRef.current) {
+        destMarkerRef.current.setLngLat(destLngLat);
+      } else {
+        const el = createMarkerElement('destination', destination.name);
+        destMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
+          .setLngLat(destLngLat)
+          .addTo(map);
+      }
+    } else if (destMarkerRef.current) {
+      destMarkerRef.current.remove();
+      destMarkerRef.current = null;
+    }
+
+    // 3. Nearby Fleet Markers
+    if (showCars && fleetMarkersRef.current.length === 0) {
+      initialFleetCoords.forEach((coords) => {
+        const el = createMarkerElement('fleet');
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+          .setLngLat(coords)
+          .addTo(map);
+        fleetMarkersRef.current.push(marker);
+      });
+    } else if (!showCars) {
+      fleetMarkersRef.current.forEach((m) => m.remove());
+      fleetMarkersRef.current = [];
+    }
+  }, [origin, destination, mapLoaded, showCars]);
+
+  // Live Driver / Vehicle tracking marker along route
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded || routeCoordinates.length === 0) return;
+    const map = mapRef.current;
+
+    if (isNavigating || driverApproaching) {
+      const totalPoints = routeCoordinates.length;
+      const index = Math.min(
+        Math.floor((progress / 100) * (totalPoints - 1)),
+        totalPoints - 1
+      );
+      const nextIndex = Math.min(index + 1, totalPoints - 1);
+
+      const currentPoint = routeCoordinates[index];
+      const nextPoint = routeCoordinates[nextIndex] || currentPoint;
+      const bearing = calculateBearing(currentPoint, nextPoint);
+
+      if (driverMarkerRef.current) {
+        driverMarkerRef.current.setLngLat(currentPoint);
+        const iconEl = document.getElementById('bear-live-driver-icon');
+        if (iconEl) {
+          iconEl.style.transform = `rotate(${bearing}deg)`;
+        }
+      } else {
+        const el = createMarkerElement('driver');
+        driverMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
+          .setLngLat(currentPoint)
+          .addTo(map);
+      }
+
+      // Smooth camera follow during active navigation
+      if (isNavigating && progress > 0 && progress < 100) {
+        map.easeTo({
+          center: currentPoint,
+          zoom: 15.5,
+          pitch: 50,
+          bearing: bearing,
+          duration: 800,
+        });
+      }
+    } else if (driverMarkerRef.current) {
+      driverMarkerRef.current.remove();
+      driverMarkerRef.current = null;
+    }
+  }, [progress, isNavigating, driverApproaching, routeCoordinates, mapLoaded]);
+
+  // Map Controls Actions
+  const handleZoomIn = () => {
+    triggerHaptic('light');
+    mapRef.current?.zoomIn({ duration: 400 });
   };
 
-  const activeCar = isNavigating ? getCarPosition(progress) : null;
+  const handleZoomOut = () => {
+    triggerHaptic('light');
+    mapRef.current?.zoomOut({ duration: 400 });
+  };
+
+  const handleRecenter = () => {
+    triggerHaptic('medium');
+
+    // Attempt browser geolocation if user has real GPS permissions on mobile device
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { longitude, latitude } = pos.coords;
+          mapRef.current?.flyTo({
+            center: [longitude, latitude],
+            zoom: 15,
+            pitch: is3DMode ? 50 : 0,
+            essential: true,
+          });
+        },
+        () => {
+          // Graceful fallback to specified trip origin or Formosa center
+          if (origin) {
+            mapRef.current?.flyTo({ center: [origin.lng, origin.lat], zoom: 14.5, pitch: is3DMode ? 50 : 0 });
+          } else {
+            mapRef.current?.flyTo({ center: FORMOSA_CENTER, zoom: 14, pitch: is3DMode ? 50 : 0 });
+          }
+        },
+        { timeout: 3500, enableHighAccuracy: true }
+      );
+    } else if (origin) {
+      mapRef.current?.flyTo({ center: [origin.lng, origin.lat], zoom: 14.5, pitch: is3DMode ? 50 : 0 });
+    } else {
+      mapRef.current?.flyTo({ center: FORMOSA_CENTER, zoom: 14, pitch: is3DMode ? 50 : 0 });
+    }
+  };
+
+  const handleToggle3D = () => {
+    triggerHaptic('light');
+    const next = !is3DMode;
+    setIs3DMode(next);
+    mapRef.current?.easeTo({ pitch: next ? 55 : 0, duration: 800 });
+  };
+
+  const handleCycleStyle = () => {
+    triggerHaptic('selection');
+    const styles: MapStyleKey[] = ['dark', 'navigationNight', 'streets', 'satellite'];
+    const nextIdx = (styles.indexOf(currentStyle) + 1) % styles.length;
+    setCurrentStyle(styles[nextIdx]);
+  };
+
+  const handleSaveCustomToken = () => {
+    setCustomMapboxToken(tokenInput);
+    setTokenSaved(true);
+    setTimeout(() => {
+      setTokenSaved(false);
+      setShowTokenModal(false);
+      window.location.reload();
+    }, 1000);
+  };
 
   return (
     <div
-      className={`relative w-full h-full min-h-[280px] bg-[#081226] overflow-hidden select-none ${className}`}
-      id="bear-map-container"
+      className={`relative w-full overflow-hidden select-none bg-[#081226] ${className}`}
+      style={{ height }}
+      id="bear-mapbox-container-wrapper"
     >
-      {/* Dynamic Night City Map SVG */}
-      <svg
-        viewBox="0 0 400 600"
-        className="w-full h-full object-cover transition-transform duration-500"
-        style={{ transform: `scale(${zoom})` }}
-        preserveAspectRatio="xMidYMid slice"
-      >
-        <defs>
-          {/* Water gradient for Rio Paraguay / Costanera */}
-          <linearGradient id="riverGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#040b17" />
-            <stop offset="100%" stopColor="#0c1a30" />
-          </linearGradient>
+      {/* Real Mapbox GL Canvas Container */}
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full absolute inset-0 z-0"
+        style={{ opacity: useFallbackSvg ? 0 : 1 }}
+      />
 
-          {/* Neon Route Glow */}
-          <filter id="routeGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
+      {/* High-fidelity SVG Fallback if Mapbox WebGL encounters unsupported environment */}
+      {useFallbackSvg && (
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-[#081226]">
+          <svg viewBox="0 0 400 600" className="w-full h-full object-cover">
+            <rect width="400" height="600" fill="#081226" />
+            <g stroke="#15213A" strokeWidth="2">
+              <line x1="0" y1="200" x2="400" y2="200" />
+              <line x1="0" y1="360" x2="400" y2="360" />
+              <line x1="160" y1="0" x2="160" y2="600" />
+              <line x1="280" y1="0" x2="280" y2="600" />
+            </g>
+            <path d="M 100 480 L 100 380 L 170 350 L 220 260 L 260 220 L 300 140" fill="none" stroke="#F5B51B" strokeWidth="4.5" />
+            <circle cx="100" cy="480" r="7" fill="#F5B51B" />
+            <circle cx="300" cy="140" r="7" fill="#FF4B4B" />
+          </svg>
+        </div>
+      )}
 
-          {/* Grid pattern */}
-          <pattern id="nightGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#15213A" strokeWidth="0.8" opacity="0.6" />
-            <circle cx="20" cy="20" r="0.8" fill="#33405A" opacity="0.4" />
-          </pattern>
-        </defs>
-
-        {/* Base Background */}
-        <rect width="400" height="600" fill="#081226" />
-        <rect width="400" height="600" fill="url(#nightGrid)" />
-
-        {/* River bend at top-right (Costanera Vuelta Fermosa vibe) */}
-        <path
-          d="M260 0 C 280 100, 370 140, 400 200 L400 0 Z"
-          fill="url(#riverGrad)"
-          stroke="#15213A"
-          strokeWidth="1.5"
-        />
-        <text x="330" y="80" fill="#33405A" fontSize="9" fontWeight="600" letterSpacing="1">
-          RÍO PARAGUAY
-        </text>
-
-        {/* City Blocks / Zoning areas */}
-        <rect x="30" y="60" width="80" height="100" rx="6" fill="#0D1930" stroke="#15213A" strokeWidth="1" />
-        <rect x="130" y="80" width="100" height="70" rx="6" fill="#0D1930" stroke="#15213A" strokeWidth="1" />
-        <rect x="40" y="200" width="110" height="120" rx="6" fill="#0D1930" stroke="#15213A" strokeWidth="1" />
-        <rect x="180" y="180" width="90" height="100" rx="6" fill="#0D1930" stroke="#15213A" strokeWidth="1" />
-        <rect x="40" y="360" width="120" height="90" rx="6" fill="#0D1930" stroke="#15213A" strokeWidth="1" />
-        <rect x="190" y="320" width="160" height="130" rx="6" fill="#0D1930" stroke="#15213A" strokeWidth="1" />
-
-        {/* Green park zones */}
-        <rect x="190" y="90" width="40" height="50" rx="4" fill="#0c2419" stroke="#1b4d36" strokeWidth="0.8" opacity="0.7" />
-        <text x="194" y="118" fill="#59C878" fontSize="7" fontWeight="600">P. San Martín</text>
-
-        {/* Secondary Street Grid */}
-        <g stroke="#15213A" strokeWidth="3" strokeLinecap="round">
-          <line x1="0" y1="180" x2="400" y2="180" />
-          <line x1="0" y1="340" x2="400" y2="340" />
-          <line x1="0" y1="480" x2="400" y2="480" />
-          <line x1="160" y1="0" x2="160" y2="600" />
-          <line x1="280" y1="0" x2="280" y2="600" />
-          <line x1="60" y1="0" x2="60" y2="600" />
-        </g>
-
-        {/* Primary Avenues (Illuminated Dark Gold/Blue) */}
-        <g stroke="#202D47" strokeWidth="7" strokeLinecap="round">
-          {/* Av. 25 de Mayo (Diagonal / Main) */}
-          <line x1="20" y1="560" x2="380" y2="120" />
-          {/* Av. Gutnisky */}
-          <line x1="100" y1="580" x2="100" y2="40" />
-          {/* Av. Pantaleón Gómez */}
-          <line x1="0" y1="260" x2="400" y2="260" />
-          {/* Costanera */}
-          <path d="M250 0 Q 280 120 370 190" fill="none" />
-        </g>
-
-        {/* Street Name Labels */}
-        <text x="75" y="440" fill="#6A778F" fontSize="8" fontWeight="600" transform="rotate(-90 75 440)">
-          Av. Gutnisky
-        </text>
-        <text x="210" y="305" fill="#6A778F" fontSize="8" fontWeight="600" transform="rotate(-30 210 305)">
-          Av. 25 de Mayo
-        </text>
-        <text x="285" y="195" fill="#6A778F" fontSize="8" fontWeight="600">
-          Costanera Vuelta Fermosa
-        </text>
-
-        {/* Surrounding Active Fleet Cars (Dots) */}
-        {showCars && (
-          <g>
-            <circle cx="160" cy="220" r="5" fill="#15213A" stroke="#F5B51B" strokeWidth="2" />
-            <circle cx="280" cy="380" r="5" fill="#15213A" stroke="#F5B51B" strokeWidth="2" />
-            <circle cx="70" cy="140" r="4" fill="#15213A" stroke="#59C878" strokeWidth="2" />
-            <circle cx="230" cy="460" r="5" fill="#15213A" stroke="#FFD66A" strokeWidth="2" />
-          </g>
-        )}
-
-        {/* Planned Route Line (Gold Neon) */}
-        {(origin || destination || isNavigating) && (
-          <g>
-            {/* Glowing blur underlayer */}
-            <path
-              d="M 100 480 L 100 380 L 170 350 L 220 260 L 260 220 L 300 140"
-              fill="none"
-              stroke="#F5B51B"
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.3"
-              filter="url(#routeGlow)"
-            />
-            {/* Solid golden route line */}
-            <path
-              d="M 100 480 L 100 380 L 170 350 L 220 260 L 260 220 L 300 140"
-              fill="none"
-              stroke="#F5B51B"
-              strokeWidth="4.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {/* Animated dotted overlay */}
-            <path
-              d="M 100 480 L 100 380 L 170 350 L 220 260 L 260 220 L 300 140"
-              fill="none"
-              stroke="#FFFFFF"
-              strokeWidth="2"
-              strokeDasharray="6 8"
-              strokeLinecap="round"
-              opacity="0.8"
-            />
-          </g>
-        )}
-
-        {/* Origin Pin (Pick-up) */}
-        <g transform="translate(100, 480)">
-          {/* Ripple */}
-          <circle cx="0" cy="0" r="14" fill="#F5B51B" opacity="0.2" className="animate-ping" />
-          <circle cx="0" cy="0" r="8" fill="#F5B51B" stroke="#081226" strokeWidth="2.5" />
-          <circle cx="0" cy="0" r="3" fill="#081226" />
-          {/* Label banner */}
-          <rect x="-42" y="12" width="84" height="20" rx="10" fill="#15213A" stroke="#F5B51B" strokeWidth="1" />
-          <text x="0" y="25" fill="#F5F7FA" fontSize="8" fontWeight="600" textAnchor="middle">
-            Tu ubicación
-          </text>
-        </g>
-
-        {/* Destination Pin (Drop-off) */}
-        <g transform="translate(300, 140)">
-          <circle cx="0" cy="0" r="18" fill="#F5B51B" opacity="0.25" />
-          <circle cx="0" cy="0" r="10" fill="#FF4B4B" stroke="#F5F7FA" strokeWidth="2" />
-          <path d="M0 -4 L0 4 M-4 0 L4 0" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
-          {/* Label banner */}
-          <rect x="-46" y="-32" width="92" height="22" rx="11" fill="#15213A" stroke="#33405A" strokeWidth="1" />
-          <text x="0" y="-18" fill="#F5B51B" fontSize="8" fontWeight="700" textAnchor="middle">
-            {destination ? destination.name.slice(0, 14) : 'Destino'}
-          </text>
-        </g>
-
-        {/* Live Approaching Driver Marker */}
-        {driverApproaching && (
-          <g transform={`translate(${approachingCar.x}, ${approachingCar.y}) rotate(${approachingCar.angle})`}>
-            <circle cx="0" cy="0" r="14" fill="#F5B51B" opacity="0.3" className="animate-pulse" />
-            <rect x="-10" y="-16" width="20" height="32" rx="6" fill="#F5B51B" stroke="#081226" strokeWidth="2" />
-            {/* Windshield */}
-            <rect x="-7" y="-8" width="14" height="8" rx="2" fill="#081226" />
-            <circle cx="-5" cy="-14" r="2" fill="#FFFFFF" />
-            <circle cx="5" cy="-14" r="2" fill="#FFFFFF" />
-          </g>
-        )}
-
-        {/* Live Active Navigation Vehicle */}
-        {activeCar && (
-          <g transform={`translate(${activeCar.x}, ${activeCar.y}) rotate(${activeCar.angle})`}>
-            {/* Gold Halo */}
-            <circle cx="0" cy="0" r="16" fill="#F5B51B" opacity="0.4" />
-            {/* Vehicle body */}
-            <rect x="-11" y="-18" width="22" height="36" rx="6" fill="#F5F7FA" stroke="#081226" strokeWidth="2.5" />
-            {/* Front & Rear windows */}
-            <rect x="-8" y="-9" width="16" height="8" rx="2" fill="#15213A" />
-            <rect x="-7" y="6" width="14" height="5" rx="1.5" fill="#15213A" />
-            {/* Yellow Taxi / Bear Cap roof accent */}
-            <rect x="-5" y="-2" width="10" height="4" rx="2" fill="#F5B51B" />
-            {/* Headlights beam */}
-            <polygon points="-8,-18 8,-18 16,-45 -16,-45" fill="#FFF4B8" opacity="0.25" />
-          </g>
-        )}
-      </svg>
-
-      {/* Floating Map Controls */}
+      {/* Floating Mapbox Controls Bar */}
       {interactive && (
-        <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        <div className="absolute top-4 right-3.5 flex flex-col gap-2 z-20 pointer-events-auto">
+          {/* Zoom In */}
           <button
             type="button"
-            onClick={() => setZoom((z) => Math.min(z + 0.2, 1.8))}
-            className="w-10 h-10 rounded-full bg-[#15213A]/90 backdrop-blur-md border border-[#33405A] flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform"
-            aria-label="Zoom in"
+            onClick={handleZoomIn}
+            className="w-9 h-9 rounded-xl bg-[#15213A]/90 hover:bg-[#202D47] backdrop-blur-md border border-[#33405A] flex items-center justify-center text-white shadow-lg active:scale-95 transition-all"
+            title="Acercar mapa"
+            aria-label="Acercar mapa"
           >
-            <Plus className="w-5 h-5 text-[#F5B51B]" />
+            <Plus className="w-4 h-4 text-[#F5B51B]" />
           </button>
+
+          {/* Zoom Out */}
           <button
             type="button"
-            onClick={() => setZoom((z) => Math.max(z - 0.2, 0.8))}
-            className="w-10 h-10 rounded-full bg-[#15213A]/90 backdrop-blur-md border border-[#33405A] flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform"
-            aria-label="Zoom out"
+            onClick={handleZoomOut}
+            className="w-9 h-9 rounded-xl bg-[#15213A]/90 hover:bg-[#202D47] backdrop-blur-md border border-[#33405A] flex items-center justify-center text-white shadow-lg active:scale-95 transition-all"
+            title="Alejar mapa"
+            aria-label="Alejar mapa"
           >
-            <Minus className="w-5 h-5 text-white" />
+            <Minus className="w-4 h-4 text-white" />
           </button>
+
+          {/* 3D Tilt View */}
           <button
             type="button"
-            onClick={() => setZoom(1)}
-            className="w-10 h-10 rounded-full bg-[#15213A]/90 backdrop-blur-md border border-[#33405A] flex items-center justify-center text-white shadow-lg active:scale-95 transition-transform"
-            aria-label="Recentrar mapa"
+            onClick={handleToggle3D}
+            className={`w-9 h-9 rounded-xl backdrop-blur-md border flex items-center justify-center text-xs font-black shadow-lg active:scale-95 transition-all ${
+              is3DMode
+                ? 'bg-[#F5B51B] text-[#081226] border-[#F5B51B] shadow-[0_0_12px_rgba(245,181,27,0.4)]'
+                : 'bg-[#15213A]/90 hover:bg-[#202D47] text-[#AEB7C8] border-[#33405A]'
+            }`}
+            title="Alternar perspectiva 3D"
+            aria-label="Alternar perspectiva 3D"
           >
-            <Compass className="w-5 h-5 text-[#AEB7C8]" />
+            3D
+          </button>
+
+          {/* Recenter / GPS */}
+          <button
+            type="button"
+            onClick={handleRecenter}
+            className="w-9 h-9 rounded-xl bg-[#15213A]/90 hover:bg-[#202D47] backdrop-blur-md border border-[#33405A] flex items-center justify-center text-white shadow-lg active:scale-95 transition-all"
+            title="Centrar en mi ubicación"
+            aria-label="Centrar en mi ubicación"
+          >
+            <LocateFixed className="w-4 h-4 text-[#59C878]" />
+          </button>
+
+          {/* Layers / Styles Switcher */}
+          <button
+            type="button"
+            onClick={handleCycleStyle}
+            className="w-9 h-9 rounded-xl bg-[#15213A]/90 hover:bg-[#202D47] backdrop-blur-md border border-[#33405A] flex items-center justify-center text-white shadow-lg active:scale-95 transition-all"
+            title={`Cambiar estilo (actual: ${currentStyle})`}
+            aria-label="Cambiar estilo de mapa"
+          >
+            <Layers className="w-4 h-4 text-[#AEB7C8]" />
           </button>
         </div>
       )}
 
-      {/* Top Floating Security Pill */}
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#15213A]/90 backdrop-blur-md border border-[#33405A] shadow-lg">
-        <ShieldCheck className="w-4 h-4 text-[#59C878]" />
-        <span className="text-[11px] font-semibold text-white tracking-wide">Viaje Seguro GPS</span>
+      {/* Top Left Security & Mapbox Badge */}
+      <div className="absolute top-4 left-3.5 z-20 flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#15213A]/90 backdrop-blur-md border border-[#33405A] shadow-lg">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#59C878]" />
+          <span className="text-[10px] font-bold text-white tracking-wide">
+            Mapbox GPS • Formosa
+          </span>
+        </div>
+
+        {/* Mapbox Token Config Trigger */}
+        <button
+          type="button"
+          onClick={() => setShowTokenModal(true)}
+          className="p-1.5 rounded-full bg-[#15213A]/80 hover:bg-[#202D47] border border-[#33405A] text-[#AEB7C8] hover:text-[#F5B51B] shadow-md transition-colors"
+          title="Configurar Mapbox Token"
+        >
+          <Key className="w-3.5 h-3.5" />
+        </button>
       </div>
+
+      {/* Mapbox Token Modal */}
+      {showTokenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-sm bg-[#15213A] border border-[#33405A] rounded-3xl p-5 shadow-2xl flex flex-col gap-4 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#F5B51B]/20 border border-[#F5B51B] flex items-center justify-center text-[#F5B51B]">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">Mapbox Access Token</h3>
+                  <p className="text-[11px] text-[#AEB7C8]">Personalizá tus mapas vectoriales</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#AEB7C8] leading-relaxed">
+              BearDrive incluye un token listo para usar. También podés ingresar tu propio token público de <span className="text-white font-mono">mapbox.com</span> para estilos personalizados y cuotas dedicadas.
+            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-[#AEB7C8]">Token público (pk.eyJ...)</label>
+              <input
+                type="text"
+                placeholder="pk.eyJ1IjoieW91..."
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                className="w-full bg-[#081226] border border-[#33405A] focus:border-[#F5B51B] rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => setShowTokenModal(false)}
+                className="px-4 py-2 rounded-xl text-xs text-[#AEB7C8] hover:text-white font-medium"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCustomToken}
+                className="px-4 py-2 rounded-xl bg-[#F5B51B] text-[#081226] font-bold text-xs shadow-lg hover:bg-[#FFBE22] active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                {tokenSaved ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>¡Guardado!</span>
+                  </>
+                ) : (
+                  <span>Guardar Token</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

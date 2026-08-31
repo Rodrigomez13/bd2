@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Zap, Car, Sparkles, Leaf, Bike, Tag, ChevronDown, Check, ArrowRight, Shield, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Zap, Car, Sparkles, Leaf, Bike, Tag, ChevronDown, Check, ArrowRight, Shield, Clock, MapPin } from 'lucide-react';
 import { MapView } from '../MapView';
 import { LocationItem, PaymentMethod, RideCategory } from '../../types';
 import { PAYMENT_METHODS, RIDE_CATEGORIES } from '../../data/mockData';
+import { getDirections } from '../../services/mapboxService';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface SelectRideScreenProps {
   origin: LocationItem;
@@ -22,19 +24,30 @@ export const SelectRideScreen: React.FC<SelectRideScreenProps> = ({
   const [showPaymentPicker, setShowPaymentPicker] = useState(false);
   const [promoCode, setPromoCode] = useState('BEAR20');
   const [promoApplied, setPromoApplied] = useState(true);
+  const [preferFemaleDriver, setPreferFemaleDriver] = useState(false);
+  const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; durationMinutes: number; summary: string }>({
+    distanceKm: 3.6,
+    durationMinutes: 7,
+    summary: 'Ruta óptima por Av. 25 de Mayo',
+  });
+
+  useEffect(() => {
+    async function updateRoute() {
+      const origCoords: [number, number] = [origin.lng, origin.lat];
+      const destCoords: [number, number] = [destination.lng, destination.lat];
+      const res = await getDirections(origCoords, destCoords);
+      setRouteInfo({
+        distanceKm: res.distanceKm,
+        durationMinutes: res.durationMinutes,
+        summary: res.summary,
+      });
+    }
+    updateRoute();
+  }, [origin, destination]);
 
   // Discount calculation if BEAR20 is active (20% off)
   const discountRate = promoApplied ? 0.2 : 0;
   const finalPrice = Math.round(selectedCategory.basePrice * (1 - discountRate));
-  const discountAmount = selectedCategory.basePrice - finalPrice;
-
-  const handleApplyPromo = () => {
-    if (promoCode.toUpperCase() === 'BEAR20' || promoCode.toUpperCase() === 'NOCHEBEAR') {
-      setPromoApplied(true);
-    } else {
-      alert('Código inválido. Probá BEAR20 para 20% OFF.');
-    }
-  };
 
   const getCategoryIcon = (type: RideCategory['iconType']) => {
     switch (type) {
@@ -53,7 +66,7 @@ export const SelectRideScreen: React.FC<SelectRideScreenProps> = ({
 
   return (
     <div className="relative min-h-[640px] flex flex-col bg-[#081226] text-white">
-      {/* Top Map View with Route */}
+      {/* Top Map View with Mapbox Route */}
       <div className="relative h-60 w-full overflow-hidden border-b border-[#33405A]/40">
         <MapView origin={origin} destination={destination} interactive={false} />
 
@@ -74,7 +87,9 @@ export const SelectRideScreen: React.FC<SelectRideScreenProps> = ({
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-bold text-white tracking-tight">Selecciona tu viaje</h3>
-            <span className="text-xs text-[#AEB7C8]">4.2 km • ~8 min</span>
+            <span className="text-xs text-[#AEB7C8] font-mono">
+              {routeInfo.distanceKm} km • ~{routeInfo.durationMinutes} min
+            </span>
           </div>
 
           {/* Ride Options List */}
@@ -86,7 +101,10 @@ export const SelectRideScreen: React.FC<SelectRideScreenProps> = ({
               return (
                 <div
                   key={cat.id}
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => {
+                    triggerHaptic('selection');
+                    setSelectedCategory(cat);
+                  }}
                   className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition-all ${
                     isSelected
                       ? 'bg-[#15213A] border-2 border-[#F5B51B] shadow-[0_0_15px_rgba(245,181,27,0.25)]'
@@ -138,11 +156,39 @@ export const SelectRideScreen: React.FC<SelectRideScreenProps> = ({
 
         {/* Payment and Promo Toolbar */}
         <div className="pt-3 border-t border-[#33405A]/60 flex flex-col gap-3">
+          {/* Smart Matching Preferences */}
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0D1930] border border-[#33405A]">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">👩</span>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-white">Preferencia de Conductora</span>
+                <span className="text-[10px] text-[#AEB7C8]">Prioriza conductoras mujeres en el matching</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('medium');
+                setPreferFemaleDriver(!preferFemaleDriver);
+              }}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                preferFemaleDriver
+                  ? 'bg-[#EC4899] text-white shadow-md'
+                  : 'bg-[#15213A] text-[#AEB7C8] border border-[#33405A]'
+              }`}
+            >
+              {preferFemaleDriver ? 'ACTIVADA' : 'SIN PREFERENCIA'}
+            </button>
+          </div>
+
           <div className="flex items-center justify-between gap-2">
             {/* Payment Method Selector */}
             <button
               type="button"
-              onClick={() => setShowPaymentPicker(!showPaymentPicker)}
+              onClick={() => {
+                triggerHaptic('light');
+                setShowPaymentPicker(!showPaymentPicker);
+              }}
               className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#15213A] border border-[#33405A] text-xs font-semibold text-white hover:border-[#F5B51B] transition-colors"
             >
               <span>💳 {selectedPayment.name}</span>
@@ -165,6 +211,7 @@ export const SelectRideScreen: React.FC<SelectRideScreenProps> = ({
                   key={pm.id}
                   type="button"
                   onClick={() => {
+                    triggerHaptic('selection');
                     setSelectedPayment(pm);
                     setShowPaymentPicker(false);
                   }}
@@ -184,7 +231,10 @@ export const SelectRideScreen: React.FC<SelectRideScreenProps> = ({
           {/* Confirm Ride CTA */}
           <button
             type="button"
-            onClick={() => onConfirmRide(selectedCategory, selectedPayment, promoCode)}
+            onClick={() => {
+              triggerHaptic('heavy');
+              onConfirmRide(selectedCategory, selectedPayment, promoCode);
+            }}
             className="w-full bg-[#F5B51B] hover:bg-[#FFBE22] active:scale-[0.98] text-[#081226] font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(245,181,27,0.35)] transition-all cursor-pointer text-base"
           >
             <span>Confirmar viaje (${finalPrice.toLocaleString('es-AR')})</span>

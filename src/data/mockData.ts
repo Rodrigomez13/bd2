@@ -344,3 +344,290 @@ export const MOCK_PROMOS = [
     expiry: 'Permanente',
   }
 ];
+
+// Documentación de Conductor conforme al marco regulatorio de Formosa
+export const MOCK_DRIVER_DOCUMENTS = [
+  {
+    id: 'doc-permiso',
+    type: 'permiso_explotacion' as const,
+    title: 'Permiso de Explotación Municipal',
+    status: 'aprobado' as const,
+    expiresAt: '15/12/2026',
+    daysToExpiry: 106,
+    semaphore: 'verde' as const,
+    fileName: 'permiso_transporte_muni_formosa_2026.pdf',
+    isRequired: true,
+  },
+  {
+    id: 'doc-licencia',
+    type: 'licencia_d1' as const,
+    title: 'Licencia Nacional Categoría D1',
+    status: 'aprobado' as const,
+    expiresAt: '20/11/2026',
+    daysToExpiry: 81,
+    semaphore: 'verde' as const,
+    fileName: 'licencia_nacional_d1_frente_dorso.jpg',
+    isRequired: true,
+  },
+  {
+    id: 'doc-antecedentes',
+    type: 'antecedentes_penales' as const,
+    title: 'Certificado de Antecedentes Penales',
+    status: 'aprobado' as const,
+    expiresAt: '05/10/2026',
+    daysToExpiry: 35,
+    semaphore: 'verde' as const,
+    fileName: 'antecedentes_policia_formosa_cert.pdf',
+    isRequired: true,
+  },
+  {
+    id: 'doc-seguro',
+    type: 'seguro_remis' as const,
+    title: 'Póliza de Seguro para Remis/Pasajeros',
+    status: 'en_revision' as const,
+    expiresAt: '12/09/2026',
+    daysToExpiry: 12,
+    semaphore: 'amarillo' as const,
+    fileName: 'poliza_seguro_remis_vigente_2026.pdf',
+    feedback: 'Próximo a renovar (alerta automática <15 días)',
+    isRequired: true,
+  },
+  {
+    id: 'doc-cedula',
+    type: 'cedula_automotor' as const,
+    title: 'Cédula de Identificación del Automotor (Verde)',
+    status: 'aprobado' as const,
+    expiresAt: 'Permanente',
+    daysToExpiry: 365,
+    semaphore: 'verde' as const,
+    fileName: 'cedula_verde_toyota_etios.jpg',
+    isRequired: true,
+  },
+  {
+    id: 'doc-rto',
+    type: 'rto_vtv' as const,
+    title: 'Revisión Técnica Obligatoria (RTO/VTV)',
+    status: 'aprobado' as const,
+    expiresAt: '28/01/2027',
+    daysToExpiry: 150,
+    semaphore: 'verde' as const,
+    fileName: 'certificado_rto_formosa_valido.pdf',
+    isRequired: true,
+  },
+  {
+    id: 'doc-deudores',
+    type: 'deudores_alimentarios' as const,
+    title: 'Constancia No Registro de Deudores Alimentarios',
+    status: 'aprobado' as const,
+    expiresAt: 'Permanente',
+    daysToExpiry: 365,
+    semaphore: 'verde' as const,
+    fileName: 'declaracion_jurada_deudores.pdf',
+    isRequired: true,
+  },
+  {
+    id: 'doc-perros',
+    type: 'perros_guia' as const,
+    title: 'Compromiso de Acceso para Perros Guía (Ley Discapacidad)',
+    status: 'aprobado' as const,
+    expiresAt: 'Permanente',
+    daysToExpiry: 365,
+    semaphore: 'verde' as const,
+    fileName: 'declaracion_aceptacion_perros_guia.pdf',
+    isRequired: true,
+  },
+];
+
+// Hasta 3 vehículos por conductor
+export const MOCK_DRIVER_VEHICLES = [
+  {
+    id: 'veh-1',
+    brand: 'Toyota',
+    model: 'Etios Sedan',
+    year: 2022,
+    color: 'Blanco Perlado (Reglamentario)',
+    plate: 'AE 842 BD',
+    isActive: true,
+    category: 'bear-flash' as const,
+    insuranceStatus: 'al_dia' as const,
+    rtoStatus: 'al_dia' as const,
+  },
+  {
+    id: 'veh-2',
+    brand: 'Chevrolet',
+    model: 'Onix Plus',
+    year: 2021,
+    color: 'Blanco Puro',
+    plate: 'AF 319 KT',
+    isActive: false,
+    category: 'bear-drive' as const,
+    insuranceStatus: 'al_dia' as const,
+    rtoStatus: 'por_vencer' as const,
+  },
+  {
+    id: 'veh-3',
+    brand: 'Volkswagen',
+    model: 'Virtus Highline',
+    year: 2023,
+    color: 'Gris Plata',
+    plate: 'AG 502 PM',
+    isActive: false,
+    category: 'bear-premium' as const,
+    insuranceStatus: 'al_dia' as const,
+    rtoStatus: 'al_dia' as const,
+  },
+];
+
+// Registros de Cobro Diario (modelo de ingresos sin membresías tradicionales)
+export const MOCK_DAILY_CHARGES = [
+  {
+    id: 'dc-2026-08-30',
+    date: 'Hoy, 30 de Agosto',
+    tripsCount: 14,
+    grossIncome: 38400,
+    chargeAmount: 1800,
+    ruleDescription: 'Tarifa diaria fija operativa (coeficiente Admin 2026)',
+    status: 'programado' as const,
+    paymentMethod: 'Débito automático Mercado Pago •••• 4821',
+  },
+  {
+    id: 'dc-2026-08-29',
+    date: 'Ayer, 29 de Agosto',
+    tripsCount: 18,
+    grossIncome: 47200,
+    chargeAmount: 1800,
+    ruleDescription: 'Tarifa diaria fija operativa',
+    status: 'pagado' as const,
+    paymentMethod: 'Débito automático Mercado Pago',
+  },
+  {
+    id: 'dc-2026-08-28',
+    date: '28 de Agosto',
+    tripsCount: 12,
+    grossIncome: 31500,
+    chargeAmount: 1800,
+    ruleDescription: 'Tarifa diaria fija operativa',
+    status: 'pagado' as const,
+    paymentMethod: 'Débito automático Mercado Pago',
+  },
+];
+
+// Recompensas BearPoints para Pasajeros
+export const MOCK_BEAR_POINTS_USER = {
+  currentBalance: 1250,
+  tier: 'Plata',
+  nextTier: 'Oro',
+  pointsToNextTier: 750,
+  history: [
+    { id: 'bp-1', title: 'Viaje finalizado #101', points: 60, date: 'Hoy, 08:30 AM', type: 'earned' },
+    { id: 'bp-2', title: 'Viaje en hora pico (Bonus)', points: 40, date: 'Ayer, 22:15 PM', type: 'earned' },
+    { id: 'bp-3', title: 'Referido exitoso: Laura G.', points: 250, date: '27 de Agosto', type: 'earned' },
+    { id: 'bp-4', title: 'Canje cupón 20% OFF', points: -500, date: '25 de Agosto', type: 'redeemed' },
+  ],
+};
+
+export const BEAR_POINT_REWARDS = [
+  {
+    id: 'rew-1',
+    title: '$500 de Descuento en tu próximo viaje',
+    pointsCost: 400,
+    discountValue: '$500 OFF',
+    badge: 'MÁS CANJEADO',
+    category: 'descuento' as const,
+    isAvailable: true,
+  },
+  {
+    id: 'rew-2',
+    title: 'Cupón 25% OFF en viajes nocturnos',
+    pointsCost: 600,
+    discountValue: '25% OFF',
+    badge: 'NOCTURNO',
+    category: 'descuento' as const,
+    isAvailable: true,
+  },
+  {
+    id: 'rew-3',
+    title: 'Viaje 100% Gratis en BearFlash (hasta $3.000)',
+    pointsCost: 1200,
+    discountValue: '100% GRATIS',
+    badge: 'PREMIUM',
+    category: 'viaje_gratis' as const,
+    isAvailable: true,
+  },
+  {
+    id: 'rew-4',
+    title: 'Upgrade automático a BearPremium',
+    pointsCost: 750,
+    discountValue: 'UPGRADE VIP',
+    badge: 'CONFORT',
+    category: 'upgrade' as const,
+    isAvailable: true,
+  },
+];
+
+// Conductora mujer para el matching inteligente con preferencia de género
+export const FEMALE_DRIVER_MARIA: DriverInfo = {
+  id: 'driver-maria',
+  name: 'María Fernández',
+  title: 'Conductora Verificada BearDrive',
+  rating: 4.98,
+  tripsCount: '1.8k+',
+  yearsExperience: 3,
+  acceptanceRate: 99,
+  avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
+  vehicleModel: 'Toyota Etios',
+  vehicleColor: 'Blanco Reglamentario',
+  plate: 'AF 772 BD',
+  phone: '+54 370 422-9901',
+  badges: [
+    {
+      title: 'Conductora Estrella',
+      description: 'Prioridad asignada en matching por preferencia de pasajeras.',
+      icon: 'sparkles',
+    },
+    {
+      title: 'Seguridad 100%',
+      description: 'Documentación al día y antecedentes impecables en Formosa.',
+      icon: 'shield',
+    },
+  ],
+  reviews: [
+    {
+      id: 'rev-m1',
+      author: 'Carolina V.',
+      date: 'Ayer',
+      rating: 5,
+      comment: 'Me sentí súper segura y tranquila viajando de noche con María. Excelente atención y vehículo impecable.',
+      avatarLetter: 'C',
+    },
+  ],
+};
+
+// Configuración y Métricas del Panel Administrativo de BearDrive
+export const MOCK_ADMIN_DATA = {
+  dailyRateConfig: {
+    currentAmount: 1800,
+    currency: 'ARS',
+    updatedAt: '2026-08-01',
+    updatedBy: 'Admin General (S.A.S.)',
+    mode: 'fixed_daily' as const, // 'fixed_daily' | 'percentage'
+    percentageValue: 8,
+  },
+  stats: {
+    activeTripsNow: 38,
+    onlineDrivers: 74,
+    approvedDrivers: 182,
+    pendingDocuments: 7,
+    todayGrossTurnover: 1420500, // Dinero que los pasajeros pagaron directo a choferes
+    todayPlatformRevenue: 133200, // Recaudación propia por cobro diario
+    acceptanceRate: '97.4%',
+    avgEta: '3.4 min',
+  },
+  matchingConfig: {
+    preferFemaleDriverMultiplier: 1.8,
+    round1RadiusKm: 1.5,
+    round2RadiusKm: 3.5,
+    round3RadiusKm: 7.0,
+    offerTimeoutSeconds: 15,
+  },
+};

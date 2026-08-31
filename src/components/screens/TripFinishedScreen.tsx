@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Star, CheckCircle, Heart, Sparkles, Receipt, ArrowRight, ThumbsUp } from 'lucide-react';
 import { BearMascotIllustration } from '../BearMascotIllustration';
 import { ActiveTripState } from '../../types';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface TripFinishedScreenProps {
   trip: ActiveTripState;
@@ -30,12 +31,14 @@ export const TripFinishedScreen: React.FC<TripFinishedScreenProps> = ({
   const tips = [200, 500, 1000];
 
   const toggleTag = (tag: string) => {
+    triggerHaptic('light');
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
 
   const handleSendRating = () => {
+    triggerHaptic('success');
     setSubmitted(true);
     setTimeout(() => {
       onComplete();
@@ -51,7 +54,7 @@ export const TripFinishedScreen: React.FC<TripFinishedScreenProps> = ({
         {/* Fare Summary Pill */}
         <div className="mt-1 p-4 rounded-2xl bg-[#15213A] border border-[#33405A] w-full max-w-sm shadow-xl">
           <div className="flex items-center justify-between text-xs text-[#AEB7C8] mb-1">
-            <span>Total abonado con {trip.paymentMethod.name}</span>
+            <span>Pago directo al conductor ({trip.paymentMethod.name})</span>
             <span>{trip.category.name}</span>
           </div>
           <div className="flex items-baseline justify-between">
@@ -63,6 +66,15 @@ export const TripFinishedScreen: React.FC<TripFinishedScreenProps> = ({
                 Ahorraste ${trip.discount.toLocaleString('es-AR')} (BEAR20)
               </span>
             )}
+          </div>
+
+          {/* BearPoints Earned Badge */}
+          <div className="mt-3 pt-2.5 border-t border-[#33405A]/60 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs text-[#59C878] font-bold">
+              <Sparkles className="w-4 h-4 text-[#F5B51B]" />
+              <span>¡Ganaste +50 BearPoints!</span>
+            </div>
+            <span className="text-[10px] text-[#AEB7C8]">Acreditados a tu cuenta</span>
           </div>
         </div>
       </div>
@@ -87,8 +99,11 @@ export const TripFinishedScreen: React.FC<TripFinishedScreenProps> = ({
             <button
               key={star}
               type="button"
-              onClick={() => setRating(star)}
-              className="p-1.5 transform hover:scale-125 active:scale-95 transition-transform"
+              onClick={() => {
+                triggerHaptic('selection');
+                setRating(star);
+              }}
+              className="p-1.5 transform hover:scale-125 active:scale-95 transition-transform cursor-pointer"
             >
               <Star
                 className={`w-8 h-8 ${
@@ -110,7 +125,7 @@ export const TripFinishedScreen: React.FC<TripFinishedScreenProps> = ({
                 key={tag}
                 type="button"
                 onClick={() => toggleTag(tag)}
-                className={`text-xs px-3 py-1.5 rounded-full transition-all ${
+                className={`text-xs px-3 py-1.5 rounded-full transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-[#F5B51B] text-[#081226] font-bold shadow-md'
                     : 'bg-[#15213A] text-[#AEB7C8] border border-[#33405A]'
@@ -132,8 +147,11 @@ export const TripFinishedScreen: React.FC<TripFinishedScreenProps> = ({
               <button
                 key={amount}
                 type="button"
-                onClick={() => setSelectedTip(selectedTip === amount ? null : amount)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setSelectedTip(selectedTip === amount ? null : amount);
+                }}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   selectedTip === amount
                     ? 'bg-[#59C878] text-[#081226] shadow-md'
                     : 'bg-[#15213A] border border-[#33405A] text-white'

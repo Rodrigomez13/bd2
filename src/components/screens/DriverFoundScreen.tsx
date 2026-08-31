@@ -2,6 +2,7 @@ import React from 'react';
 import { Star, Phone, MessageSquare, Share2, Shield, User, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { MapView } from '../MapView';
 import { ActiveTripState, DriverInfo } from '../../types';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface DriverFoundScreenProps {
   trip: ActiveTripState;
@@ -49,7 +50,10 @@ export const DriverFoundScreen: React.FC<DriverFoundScreenProps> = ({
           <div className="p-4 rounded-2xl bg-[#15213A] border border-[#33405A] shadow-2xl flex items-center justify-between">
             <div className="flex items-center gap-3.5">
               <div
-                onClick={() => onOpenProfile(driver)}
+                onClick={() => {
+                  triggerHaptic('light');
+                  onOpenProfile(driver);
+                }}
                 className="relative w-14 h-14 rounded-full border-2 border-[#F5B51B] overflow-hidden cursor-pointer shrink-0 shadow-lg group"
               >
                 <img
@@ -81,8 +85,11 @@ export const DriverFoundScreen: React.FC<DriverFoundScreenProps> = ({
 
             <button
               type="button"
-              onClick={() => onOpenProfile(driver)}
-              className="text-xs text-[#F5B51B] font-semibold hover:underline bg-[#0D1930] px-3 py-1.5 rounded-xl border border-[#33405A]"
+              onClick={() => {
+                triggerHaptic('light');
+                onOpenProfile(driver);
+              }}
+              className="text-xs text-[#F5B51B] font-semibold hover:underline bg-[#0D1930] px-3 py-1.5 rounded-xl border border-[#33405A] cursor-pointer"
             >
               Ver perfil
             </button>
@@ -92,8 +99,11 @@ export const DriverFoundScreen: React.FC<DriverFoundScreenProps> = ({
           <div className="grid grid-cols-3 gap-2.5">
             <button
               type="button"
-              onClick={onOpenChat}
-              className="flex items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] text-xs font-semibold text-white active:scale-95 transition-all shadow-md"
+              onClick={() => {
+                triggerHaptic('light');
+                onOpenChat();
+              }}
+              className="flex items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] text-xs font-semibold text-white active:scale-95 transition-all shadow-md cursor-pointer"
             >
               <MessageSquare className="w-4 h-4 text-[#F5B51B]" />
               <span>Mensaje</span>
@@ -101,8 +111,11 @@ export const DriverFoundScreen: React.FC<DriverFoundScreenProps> = ({
 
             <button
               type="button"
-              onClick={onOpenChat}
-              className="flex items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] text-xs font-semibold text-white active:scale-95 transition-all shadow-md"
+              onClick={() => {
+                triggerHaptic('light');
+                onOpenChat();
+              }}
+              className="flex items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] text-xs font-semibold text-white active:scale-95 transition-all shadow-md cursor-pointer"
             >
               <Phone className="w-4 h-4 text-[#59C878]" />
               <span>Llamar</span>
@@ -110,8 +123,11 @@ export const DriverFoundScreen: React.FC<DriverFoundScreenProps> = ({
 
             <button
               type="button"
-              onClick={onOpenShare}
-              className="flex items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] text-xs font-semibold text-white active:scale-95 transition-all shadow-md"
+              onClick={() => {
+                triggerHaptic('light');
+                onOpenShare();
+              }}
+              className="flex items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] text-xs font-semibold text-white active:scale-95 transition-all shadow-md cursor-pointer"
             >
               <Share2 className="w-4 h-4 text-[#FFD66A]" />
               <span>Compartir</span>
@@ -139,7 +155,10 @@ export const DriverFoundScreen: React.FC<DriverFoundScreenProps> = ({
         <div className="flex flex-col gap-2 mt-4">
           <button
             type="button"
-            onClick={onStartTrip}
+            onClick={() => {
+              triggerHaptic('heavy');
+              onStartTrip();
+            }}
             className="w-full bg-[#F5B51B] hover:bg-[#FFBE22] active:scale-[0.98] text-[#081226] font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(245,181,27,0.35)] transition-all cursor-pointer text-base"
           >
             <span>Subir al vehículo e Iniciar Viaje</span>
@@ -148,8 +167,11 @@ export const DriverFoundScreen: React.FC<DriverFoundScreenProps> = ({
 
           <button
             type="button"
-            onClick={onCancel}
-            className="text-xs text-[#AEB7C8] hover:text-white py-1 text-center font-medium"
+            onClick={() => {
+              triggerHaptic('warning');
+              onCancel();
+            }}
+            className="text-xs text-[#AEB7C8] hover:text-white py-1 text-center font-medium cursor-pointer"
           >
             Cancelar viaje
           </button>

@@ -12,9 +12,13 @@ export type ScreenId =
   | 'history'
   | 'payments'
   | 'promos'
-  | 'driver-mode';
+  | 'driver-mode'
+  | 'driver-onboarding'
+  | 'admin-panel'
+  | 'bear-points'
+  | 'conceptual-map';
 
-export type TabId = 'home' | 'rides' | 'activity' | 'promos' | 'account';
+export type TabId = 'home' | 'rides' | 'activity' | 'promos' | 'account' | 'admin' | 'ecosystem';
 
 export interface LocationItem {
   id: string;
@@ -25,6 +29,64 @@ export interface LocationItem {
   lng: number;
   type: 'recent' | 'saved' | 'poi';
   icon?: string;
+}
+
+export type DriverPreference = 'none' | 'female_driver';
+
+export interface DriverDocument {
+  id: string;
+  type: 
+    | 'permiso_explotacion'
+    | 'licencia_d1'
+    | 'antecedentes_penales'
+    | 'seguro_remis'
+    | 'cedula_automotor'
+    | 'rto_vtv'
+    | 'deudores_alimentarios'
+    | 'perros_guia';
+  title: string;
+  status: 'pendiente' | 'en_revision' | 'aprobado' | 'rechazado' | 'vencido';
+  expiresAt?: string;
+  daysToExpiry?: number;
+  semaphore: 'verde' | 'amarillo' | 'rojo';
+  fileName?: string;
+  fileUrl?: string;
+  feedback?: string;
+  isRequired: boolean;
+}
+
+export interface DriverVehicle {
+  id: string;
+  brand: string;
+  model: string;
+  year: number;
+  color: string;
+  plate: string;
+  isActive: boolean;
+  category: 'bear-flash' | 'bear-drive' | 'bear-premium' | 'bear-eco';
+  insuranceStatus: 'al_dia' | 'por_vencer' | 'vencido';
+  rtoStatus: 'al_dia' | 'por_vencer' | 'vencido';
+}
+
+export interface DailyChargeRecord {
+  id: string;
+  date: string;
+  tripsCount: number;
+  grossIncome: number;
+  chargeAmount: number;
+  ruleDescription: string;
+  status: 'pendiente' | 'programado' | 'procesando' | 'pagado' | 'fallido' | 'reintento';
+  paymentMethod: string;
+}
+
+export interface BearPointReward {
+  id: string;
+  title: string;
+  pointsCost: number;
+  discountValue: string;
+  badge: string;
+  category: 'descuento' | 'viaje_gratis' | 'upgrade' | 'partner';
+  isAvailable: boolean;
 }
 
 export interface RideCategory {

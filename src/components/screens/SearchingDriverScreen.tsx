@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, ShieldCheck, Zap, Car } from 'lucide-react';
 import { BearMascotIllustration } from '../BearMascotIllustration';
 import { ActiveTripState } from '../../types';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface SearchingDriverScreenProps {
   trip: ActiveTripState;
@@ -17,18 +18,20 @@ export const SearchingDriverScreen: React.FC<SearchingDriverScreenProps> = ({
   const [seconds, setSeconds] = useState(4);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          onDriverFound();
-          return 0;
-        }
-        return prev - 1;
-      });
+    // Separate display countdown from triggering completion to avoid state updater side-effects
+    const interval = setInterval(() => {
+      setSeconds((prev) => (prev > 1 ? prev - 1 : 0));
     }, 1000);
 
-    return () => clearInterval(timer);
+    const completionTimer = setTimeout(() => {
+      triggerHaptic('success');
+      onDriverFound();
+    }, 4000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(completionTimer);
+    };
   }, [onDriverFound]);
 
   return (
@@ -41,8 +44,11 @@ export const SearchingDriverScreen: React.FC<SearchingDriverScreenProps> = ({
         </div>
         <button
           type="button"
-          onClick={onDriverFound}
-          className="text-xs text-[#F5B51B] font-semibold hover:underline"
+          onClick={() => {
+            triggerHaptic('medium');
+            onDriverFound();
+          }}
+          className="text-xs text-[#F5B51B] font-semibold hover:underline cursor-pointer"
         >
           Acelerar demo →
         </button>
@@ -86,8 +92,11 @@ export const SearchingDriverScreen: React.FC<SearchingDriverScreenProps> = ({
 
         <button
           type="button"
-          onClick={onCancel}
-          className="w-full bg-[#15213A] hover:bg-[#202D47] border border-[#33405A] text-white font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-sm"
+          onClick={() => {
+            triggerHaptic('error');
+            onCancel();
+          }}
+          className="w-full bg-[#15213A] hover:bg-[#202D47] border border-[#33405A] text-white font-bold py-3.5 px-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-sm cursor-pointer"
         >
           <X className="w-4 h-4 text-red-400" />
           <span>Cancelar búsqueda</span>

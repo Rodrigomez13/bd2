@@ -87,6 +87,37 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         </div>
 
+        {/* Ecosystem & BearPoints Navigation Pills */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div
+            onClick={() => onNavigate('conceptual-map')}
+            className="p-3 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#F5B51B]/40 cursor-pointer transition-all flex items-center gap-2.5 shadow-md group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-[#081226] border border-[#F5B51B] flex items-center justify-center text-sm">
+              🗺️
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold text-white group-hover:text-[#F5B51B] transition-colors truncate">
+                Mapa Conceptual
+              </span>
+              <span className="text-[10px] text-[#AEB7C8] truncate">8 Pilares & Negocio</span>
+            </div>
+          </div>
+
+          <div
+            onClick={() => onNavigate('bear-points')}
+            className="p-3 rounded-2xl bg-[#0D1930] hover:bg-[#15213A] border border-[#59C878]/40 cursor-pointer transition-all flex items-center gap-2.5 shadow-md group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-[#081226] border border-[#59C878] flex items-center justify-center text-sm">
+              🎁
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold text-[#59C878] truncate">1.250 BearPoints</span>
+              <span className="text-[10px] text-[#AEB7C8] truncate">Canjear premios</span>
+            </div>
+          </div>
+        </div>
+
         {/* Quick Favorite Destinations Grid (Casa / Trabajo) */}
         <div className="grid grid-cols-2 gap-3">
           <button

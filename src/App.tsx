@@ -15,11 +15,16 @@ import { TripHistoryScreen } from './components/screens/TripHistoryScreen';
 import { PaymentMethodsScreen } from './components/screens/PaymentMethodsScreen';
 import { PromosScreen } from './components/screens/PromosScreen';
 import { DriverModeScreen } from './components/screens/DriverModeScreen';
+import { ConceptualMapScreen } from './components/screens/ConceptualMapScreen';
+import { DriverOnboardingScreen } from './components/screens/DriverOnboardingScreen';
+import { AdminPanelScreen } from './components/screens/AdminPanelScreen';
+import { BearPointsScreen } from './components/screens/BearPointsScreen';
 import { ChatCallModal } from './components/ChatCallModal';
 import { ShareTripModal } from './components/ShareTripModal';
 import { ScreenId, LocationItem, RideCategory, PaymentMethod, DriverInfo, ActiveTripState } from './types';
 import { MOCK_LOCATIONS, RIDE_CATEGORIES, PAYMENT_METHODS, MOCK_DRIVERS, INITIAL_USER } from './data/mockData';
-import { Layers, ShieldAlert, Sparkles } from 'lucide-react';
+import { triggerHaptic } from './utils/haptics';
+import { Layers, ShieldAlert, Sparkles, CheckCircle2, Info } from 'lucide-react';
 
 export function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
@@ -28,6 +33,12 @@ export function App() {
   const [selectedDestination, setSelectedDestination] = useState<LocationItem>(MOCK_LOCATIONS[3]);
   const [selectedDriver, setSelectedDriver] = useState<DriverInfo>(MOCK_DRIVERS[0]);
   const [showScreenSwitcher, setShowScreenSwitcher] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type?: 'info' | 'success' } | null>(null);
+
+  const showToast = (text: string, type: 'info' | 'success' = 'info') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   // Active trip state
   const [activeTrip, setActiveTrip] = useState<ActiveTripState>({
@@ -105,6 +116,10 @@ export function App() {
       case 'history':
       case 'payments':
       case 'promos':
+      case 'conceptual-map':
+      case 'bear-points':
+      case 'admin-panel':
+      case 'driver-onboarding':
         setCurrentScreen('home');
         break;
       case 'searching-driver':
@@ -136,6 +151,7 @@ export function App() {
     currentScreen === 'account';
 
   const screensList: { id: ScreenId; label: string; group: string }[] = [
+    { id: 'conceptual-map', label: '⭐ 00 • Ecosistema & Mapa Conceptual (8 Pilares)', group: 'Arquitectura' },
     { id: 'login', label: '01 • Login / Bienvenida', group: 'Auth' },
     { id: 'home', label: '02 • Inicio Nocturno & Mapa', group: 'Pasajero' },
     { id: 'search', label: '03 • Buscar Destino', group: 'Pasajero' },
@@ -146,10 +162,13 @@ export function App() {
     { id: 'active-trip', label: '08 • En Viaje / GPS en Vivo', group: 'Pasajero' },
     { id: 'trip-finished', label: '09 • Viaje Finalizado & Calificación', group: 'Pasajero' },
     { id: 'promos', label: '10 • Promos & Flyers Oficiales', group: 'Beneficios' },
-    { id: 'history', label: '11 • Mis Viajes & Recibos', group: 'Usuario' },
-    { id: 'payments', label: '12 • Métodos de Pago & Wallet', group: 'Usuario' },
-    { id: 'account', label: '13 • Mi Cuenta & Membresía', group: 'Usuario' },
-    { id: 'driver-mode', label: '14 • Modo Conductor & Ofertas', group: 'Conductor' },
+    { id: 'bear-points', label: '11 • BearPoints & Fidelización', group: 'Beneficios' },
+    { id: 'history', label: '12 • Mis Viajes & Recibos', group: 'Usuario' },
+    { id: 'payments', label: '13 • Métodos de Pago & Wallet', group: 'Usuario' },
+    { id: 'account', label: '14 • Mi Cuenta & Habilitaciones', group: 'Usuario' },
+    { id: 'driver-onboarding', label: '15 • Registro & Habilitación Chofer (8 Docs)', group: 'Conductor' },
+    { id: 'driver-mode', label: '16 • Modo Conductor & Cobro Diario', group: 'Conductor' },
+    { id: 'admin-panel', label: '17 • Panel de Control & Admin (SAS Formosa)', group: 'Backoffice' },
   ];
 
   return (
@@ -159,13 +178,13 @@ export function App() {
         <div className="flex items-center gap-1.5 font-bold text-[#F5B51B]">
           <span>🐻 BearDrive Formosa</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#15213A] border border-[#33405A] text-[#AEB7C8]">
-            v2.4 Nocturno
+            v2.5 Ecosistema Completo
           </span>
         </div>
         <button
           type="button"
           onClick={() => setShowScreenSwitcher(!showScreenSwitcher)}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#15213A] border border-[#F5B51B]/50 text-[#F5B51B] hover:bg-[#202D47] transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#15213A] border border-[#F5B51B]/50 text-[#F5B51B] hover:bg-[#202D47] transition-colors cursor-pointer"
         >
           <Layers className="w-3.5 h-3.5" />
           <span>Ver todas las pantallas ({screensList.length})</span>
@@ -179,12 +198,12 @@ export function App() {
             <div className="flex items-center justify-between pb-3 border-b border-[#33405A]">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#F5B51B]" />
-                <h3 className="text-base font-black text-white">Explorador de Pantallas</h3>
+                <h3 className="text-base font-black text-white">Explorador de Pantallas BearDrive</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowScreenSwitcher(false)}
-                className="text-xs text-[#AEB7C8] hover:text-white px-2 py-1 bg-[#202D47] rounded-lg"
+                className="text-xs text-[#AEB7C8] hover:text-white px-2 py-1 bg-[#202D47] rounded-lg cursor-pointer"
               >
                 Cerrar ✕
               </button>
@@ -199,7 +218,7 @@ export function App() {
                     setCurrentScreen(s.id);
                     setShowScreenSwitcher(false);
                   }}
-                  className={`flex items-center justify-between p-3 rounded-xl text-left text-xs font-semibold transition-all ${
+                  className={`flex items-center justify-between p-3 rounded-xl text-left text-xs font-semibold transition-all cursor-pointer ${
                     currentScreen === s.id
                       ? 'bg-[#F5B51B] text-[#081226] font-bold shadow-md'
                       : 'bg-[#0D1930] hover:bg-[#202D47] text-white border border-[#33405A]'
@@ -221,12 +240,34 @@ export function App() {
           <TopBar
             currentScreen={currentScreen}
             onBack={handleBack}
-            onOpenNotifications={() => alert('No tenés notificaciones pendientes en Formosa.')}
+            onNavigate={(screen) => setCurrentScreen(screen)}
+            userAvatar={INITIAL_USER.avatarUrl}
           />
+        )}
+
+        {/* Global Floating Toast */}
+        {toastMessage && (
+          <div className="absolute top-16 inset-x-4 z-50 flex items-center justify-center pointer-events-none animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="px-4 py-2.5 rounded-2xl bg-[#15213A]/95 border border-[#F5B51B] text-white text-xs font-bold shadow-2xl flex items-center gap-2 backdrop-blur-md">
+              {toastMessage.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-[#59C878] shrink-0" />
+              ) : (
+                <Info className="w-4 h-4 text-[#F5B51B] shrink-0" />
+              )}
+              <span>{toastMessage.text}</span>
+            </div>
+          </div>
         )}
 
         {/* Dynamic Screen View Router */}
         <main className="flex-1 flex flex-col overflow-hidden relative">
+          {currentScreen === 'conceptual-map' && (
+            <ConceptualMapScreen
+              onBack={handleBack}
+              onNavigateToScreen={(screen) => setCurrentScreen(screen)}
+            />
+          )}
+
           {currentScreen === 'login' && (
             <LoginScreen
               onLoginSuccess={() => {
@@ -325,10 +366,30 @@ export function App() {
           {currentScreen === 'promos' && (
             <PromosScreen
               onUsePromo={(code) => {
-                alert(`Código de promoción "${code}" activado para tu próximo viaje.`);
+                showToast(`¡Código "${code}" aplicado con 20% OFF!`, 'success');
                 setCurrentScreen('select-ride');
               }}
               onNavigateToDriver={() => setCurrentScreen('driver-mode')}
+            />
+          )}
+
+          {currentScreen === 'bear-points' && (
+            <BearPointsScreen
+              onBack={() => setCurrentScreen('home')}
+              onApplyReward={(reward) => {
+                showToast(`¡Premio "${reward}" canjeado y aplicado!`, 'success');
+                setCurrentScreen('select-ride');
+              }}
+            />
+          )}
+
+          {currentScreen === 'driver-onboarding' && (
+            <DriverOnboardingScreen
+              onBack={() => setCurrentScreen('account')}
+              onComplete={() => {
+                showToast('¡Documentación enviada! En revisión por Admin', 'success');
+                setCurrentScreen('driver-mode');
+              }}
             />
           )}
 
@@ -336,7 +397,12 @@ export function App() {
             <DriverModeScreen
               onBack={() => setCurrentScreen('account')}
               onNavigateToPassenger={() => setCurrentScreen('home')}
+              onNavigateToOnboarding={() => setCurrentScreen('driver-onboarding')}
             />
+          )}
+
+          {currentScreen === 'admin-panel' && (
+            <AdminPanelScreen onBack={() => setCurrentScreen('account')} />
           )}
         </main>
 
@@ -377,8 +443,11 @@ export function App() {
               </p>
               <button
                 type="button"
-                onClick={() => setShowSosAlert(false)}
-                className="w-full mt-3 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowSosAlert(false);
+                }}
+                className="w-full mt-3 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs cursor-pointer active:scale-95 transition-transform"
               >
                 Entendido / Cancelar alarma
               </button>

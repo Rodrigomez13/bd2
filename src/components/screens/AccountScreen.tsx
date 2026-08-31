@@ -1,5 +1,5 @@
-import React from 'react';
-import { CreditCard, MapPin, UserPlus, Settings, Star, ChevronRight, HelpCircle, Shield, Award, LogOut, Car, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { CreditCard, MapPin, UserPlus, Settings, Star, ChevronRight, HelpCircle, Shield, Award, LogOut, Car, Sparkles, CheckCircle2 } from 'lucide-react';
 import { ScreenId } from '../../types';
 import { INITIAL_USER, MOCK_TRIP_HISTORY } from '../../data/mockData';
 
@@ -11,9 +11,23 @@ interface AccountScreenProps {
 export const AccountScreen: React.FC<AccountScreenProps> = ({ onNavigate, onLogout }) => {
   const user = INITIAL_USER;
   const recentTrips = MOCK_TRIP_HISTORY.slice(0, 2);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const notify = (msg: string) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 2500);
+  };
 
   return (
-    <div className="min-h-[640px] flex flex-col bg-[#081226] text-white p-4 overflow-y-auto">
+    <div className="min-h-[640px] flex flex-col bg-[#081226] text-white p-4 overflow-y-auto relative">
+      {/* Inline Feedback Toast */}
+      {feedback && (
+        <div className="mb-3 p-3 rounded-2xl bg-[#15213A] border border-[#59C878] text-xs text-white font-bold flex items-center gap-2 shadow-lg animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-[#59C878] shrink-0" />
+          <span>{feedback}</span>
+        </div>
+      )}
+
       {/* Profile Header Box (Image 4 style) */}
       <div className="p-4 rounded-2xl bg-[#15213A] border border-[#33405A] shadow-xl flex items-center justify-between mb-4">
         <div className="flex items-center gap-3.5">
@@ -37,58 +51,65 @@ export const AccountScreen: React.FC<AccountScreenProps> = ({ onNavigate, onLogo
 
         <button
           type="button"
-          onClick={() => alert('Perfil verificado por BearDrive Security Formosa')}
+          onClick={() => notify('Perfil 100% verificado por BearDrive Security')}
           className="text-xs text-[#F5B51B] font-semibold hover:underline bg-[#0D1930] px-3 py-1.5 rounded-xl border border-[#33405A]"
         >
-          Ver perfil
+          Verificado ✓
         </button>
       </div>
 
       {/* 4 Action Quick Cards Grid (Image 4) */}
       <div className="grid grid-cols-2 gap-3 mb-5">
         <div
+          onClick={() => onNavigate('bear-points')}
+          className="p-3.5 rounded-2xl bg-[#15213A] border border-[#59C878]/60 hover:border-[#59C878] cursor-pointer transition-all shadow-sm flex flex-col gap-1.5"
+        >
+          <Sparkles className="w-5 h-5 text-[#59C878]" />
+          <span className="text-xs font-bold text-[#59C878] leading-tight">BearPoints (1.250)</span>
+          <span className="text-[10px] text-[#AEB7C8]">Canjear premios</span>
+        </div>
+
+        <div
           onClick={() => onNavigate('payments')}
-          className="p-3.5 rounded-2xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] cursor-pointer transition-all shadow-sm flex flex-col gap-2"
+          className="p-3.5 rounded-2xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] cursor-pointer transition-all shadow-sm flex flex-col gap-1.5"
         >
           <CreditCard className="w-5 h-5 text-[#F5B51B]" />
           <span className="text-xs font-bold text-white leading-tight">Métodos de pago</span>
+          <span className="text-[10px] text-[#AEB7C8]">Directo / QR MP</span>
         </div>
 
         <div
-          onClick={() => onNavigate('search')}
-          className="p-3.5 rounded-2xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] cursor-pointer transition-all shadow-sm flex flex-col gap-2"
+          onClick={() => onNavigate('driver-onboarding')}
+          className="p-3.5 rounded-2xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] cursor-pointer transition-all shadow-sm flex flex-col gap-1.5"
         >
-          <MapPin className="w-5 h-5 text-[#F5B51B]" />
-          <span className="text-xs font-bold text-white leading-tight">Mis direcciones</span>
+          <Shield className="w-5 h-5 text-[#F5B51B]" />
+          <span className="text-xs font-bold text-white leading-tight">Habilitación Chofer</span>
+          <span className="text-[10px] text-[#AEB7C8]">8 documentos / RTO</span>
         </div>
 
         <div
-          onClick={() => onNavigate('promos')}
-          className="p-3.5 rounded-2xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] cursor-pointer transition-all shadow-sm flex flex-col gap-2"
-        >
-          <UserPlus className="w-5 h-5 text-[#F5B51B]" />
-          <span className="text-xs font-bold text-white leading-tight">Invitar amigos</span>
-        </div>
-
-        <div
-          onClick={() => alert('Ajustes de notificaciones, seguridad y privacidad actualizados.')}
-          className="p-3.5 rounded-2xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] cursor-pointer transition-all shadow-sm flex flex-col gap-2"
+          onClick={() => onNavigate('admin-panel')}
+          className="p-3.5 rounded-2xl bg-[#15213A] border border-[#33405A] hover:border-[#F5B51B] cursor-pointer transition-all shadow-sm flex flex-col gap-1.5"
         >
           <Settings className="w-5 h-5 text-[#F5B51B]" />
-          <span className="text-xs font-bold text-white leading-tight">Configuración</span>
+          <span className="text-xs font-bold text-white leading-tight">Panel Admin</span>
+          <span className="text-[10px] text-[#AEB7C8]">Backoffice SAS</span>
         </div>
       </div>
 
-      {/* Membership Gold Banner */}
-      <div className="relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-[#202D47] via-[#15213A] to-[#202D47] border border-[#F5B51B]/40 shadow-md mb-5">
+      {/* Conceptual Architecture Access Banner */}
+      <div
+        onClick={() => onNavigate('conceptual-map')}
+        className="relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-[#202D47] via-[#15213A] to-[#202D47] border border-[#F5B51B]/50 shadow-md mb-5 cursor-pointer hover:border-[#F5B51B] transition-colors"
+      >
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5 text-xs font-black text-[#F5B51B]">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>MEMBRESÍA BEARDRIVE GOLD</span>
+              <span>MAPA CONCEPTUAL & ARQUITECTURA</span>
             </div>
             <p className="text-xs text-[#AEB7C8] mt-1">
-              Despacho prioritario nocturno y 10% OFF permanente en Formosa.
+              8 Pilares, 7 Fases de Viaje y Modelo Económico SAS de Formosa.
             </p>
           </div>
           <Award className="w-8 h-8 text-[#FFD66A] shrink-0" />
