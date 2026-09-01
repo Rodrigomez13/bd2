@@ -153,6 +153,10 @@ export const MapView: React.FC<MapViewProps> = ({
     if (!mapContainerRef.current) return;
 
     const token = getMapboxToken();
+    if (!token) {
+      setUseFallbackSvg(true);
+      return;
+    }
     mapboxgl.accessToken = token;
 
     try {
@@ -327,7 +331,8 @@ export const MapView: React.FC<MapViewProps> = ({
 
       map.on('error', (e) => {
         const msg = e?.error?.message || (typeof e === 'string' ? e : 'Mapbox resource loading notice');
-        console.warn('Mapbox rendering notice:', msg);
+        console.warn('[v0] Mapbox rendering notice:', msg);
+        if (/token|access|style|401|403/i.test(msg)) setUseFallbackSvg(true);
       });
 
       mapRef.current = map;

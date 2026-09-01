@@ -34,8 +34,8 @@ export function getMapboxToken(): string {
     }
   }
 
-  // 3. Fallback demo public token for seamless instant preview without forcing setup
-  return 'pk.eyJ1IjoiYmVhcmRyaXZlIiwiYSI6ImNsdzFlbTJrazAwOGUya3F2Z29oaWZ4aW4ifQ.9M8w0m5D5l4fL5l6m7n8o9';
+  // No fake token: MapView will render its local preview map instead of a blank canvas.
+  return '';
 }
 
 export function setCustomMapboxToken(token: string): void {

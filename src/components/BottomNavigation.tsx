@@ -31,7 +31,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
   return (
     <nav
-      className="sticky bottom-0 z-30 w-full bg-[#081226]/95 backdrop-blur-md border-t border-[#33405A]/50 px-2 py-1.5 flex items-center justify-around"
+      className="sticky bottom-0 z-30 w-full bg-[#081226]/95 backdrop-blur-md border-t border-[#33405A]/50 px-2 py-1.5 safe-bottom flex items-center justify-around"
       id="bear-bottom-nav"
     >
       {tabs.map((tab) => {
