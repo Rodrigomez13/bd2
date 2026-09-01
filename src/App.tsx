@@ -26,11 +26,20 @@ import { MOCK_LOCATIONS, RIDE_CATEGORIES, PAYMENT_METHODS, MOCK_DRIVERS, INITIAL
 import { triggerHaptic } from './utils/haptics';
 import { Layers, ShieldAlert, Sparkles, CheckCircle2, Info } from 'lucide-react';
 import { watchGPSPosition, getCurrentGPSPosition } from './services/geolocationService';
-import { syncCreateTrip, syncUpdateTripStatus } from './services/supabaseClient';
+import {
+  getCurrentUser,
+  getSupabaseClient,
+  signInWithPassword,
+  signOut,
+  signUpWithPassword,
+  syncCreateTrip,
+  syncUpdateTripStatus,
+} from './services/supabaseClient';
 
 export function App() {
-  const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [currentScreen, setCurrentScreen] = useState<ScreenId>('login');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [selectedOrigin, setSelectedOrigin] = useState<LocationItem>(MOCK_LOCATIONS[0]);
   const [selectedDestination, setSelectedDestination] = useState<LocationItem>(MOCK_LOCATIONS[3]);
   const [selectedDriver, setSelectedDriver] = useState<DriverInfo>(MOCK_DRIVERS[0]);
@@ -41,6 +50,71 @@ export function App() {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 3000);
   };
+
+  useEffect(() => {
+    let mounted = true;
+    getCurrentUser().then((user) => {
+      if (mounted && user) {
+        setIsAuthenticated(true);
+        setCurrentScreen('home');
+      }
+    });
+    const client = getSupabaseClient();
+    const subscription = client?.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      setIsAuthenticated(Boolean(session?.user));
+      if (session?.user) setCurrentScreen('home');
+    });
+    return () => {
+      mounted = false;
+      subscription?.data.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleAuthentication = async ({
+    email,
+    password,
+    fullName,
+    isRegister,
+  }: {
+    email: string;
+    password: string;
+    fullName: string;
+    isRegister: boolean;
+  }) => {
+    const result = isRegister
+      ? await signUpWithPassword(email, password, fullName)
+      : await signInWithPassword(email, password);
+    if (!result.ok) {
+      showToast(result.message || 'No se pudo iniciar sesión.');
+      return;
+    }
+    if (!result.user) {
+      showToast(result.message || 'Revisá tu correo para continuar.', 'success');
+      return;
+    }
+    setIsDemoMode(false);
+    setIsAuthenticated(true);
+    setCurrentScreen('home');
+  };
+
+  const handleExploreDemo = () => {
+    setIsDemoMode(true);
+    setIsAuthenticated(true);
+    setCurrentScreen('home');
+    showToast('Estás explorando datos locales de demostración.');
+  };
+
+  const handleLogout = async () => {
+    if (!isDemoMode) await signOut();
+    setIsDemoMode(false);
+    setIsAuthenticated(false);
+    setCurrentScreen('login');
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated && currentScreen !== 'login') setCurrentScreen('login');
+  }, [currentScreen, isAuthenticated]);
 
   // Real-time GPS device tracking subscription
   useEffect(() => {
@@ -221,9 +295,9 @@ export function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-start p-0 sm:p-4 selection:bg-primary selection:text-primary-foreground">
+    <div className="min-h-dvh bg-background text-foreground flex flex-col items-center justify-start p-0 sm:p-4 lg:p-6 selection:bg-primary selection:text-primary-foreground">
       {/* Top Demo Bar / Screen Switcher Shortcut */}
-      <div className="w-full max-w-md mb-2 px-2 hidden sm:flex items-center justify-between text-xs text-[#AEB7C8]">
+      <div className="w-full max-w-md md:max-w-3xl lg:max-w-6xl xl:max-w-7xl mb-2 px-2 hidden sm:flex items-center justify-between text-xs text-[#AEB7C8]">
         <div className="flex items-center gap-1.5 font-bold text-[#F5B51B]">
           <span>🐻 BearDrive Formosa</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#15213A] border border-[#33405A] text-[#AEB7C8]">
@@ -243,7 +317,7 @@ export function App() {
       {/* Screen Switcher Drawer Modal */}
       {showScreenSwitcher && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#15213A] border border-[#F5B51B] rounded-3xl p-5 shadow-2xl max-h-[85vh] flex flex-col">
+          <div className="w-full max-w-md md:max-w-3xl lg:max-w-5xl bg-[#15213A] border border-[#F5B51B] rounded-3xl p-5 shadow-2xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-[#33405A]">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#F5B51B]" />
@@ -282,8 +356,8 @@ export function App() {
         </div>
       )}
 
-      {/* Mobile Device Frame Mockup */}
-      <div className="w-full max-w-md bg-[#081226] border-0 sm:border sm:border-[#33405A] sm:rounded-[36px] shadow-2xl overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[720px] sm:max-h-[840px] relative">
+      {/* App shell: compact on mobile, expansive and scroll-safe on tablet/desktop. */}
+      <div className="app-shell w-full max-w-md md:max-w-3xl lg:max-w-6xl xl:max-w-7xl bg-[#081226] border-0 sm:border sm:border-[#33405A] sm:rounded-[36px] lg:rounded-[28px] shadow-2xl overflow-hidden flex flex-col min-h-dvh sm:min-h-[720px] md:min-h-[calc(100dvh-5.5rem)] md:max-h-none relative">
         {/* Global Top Bar */}
         {showTopBar && (
           <TopBar
@@ -319,10 +393,8 @@ export function App() {
 
           {currentScreen === 'login' && (
             <LoginScreen
-              onLoginSuccess={() => {
-                setIsAuthenticated(true);
-                setCurrentScreen('home');
-              }}
+              onAuthenticate={handleAuthentication}
+              onExploreDemo={handleExploreDemo}
             />
           )}
 
@@ -404,7 +476,7 @@ export function App() {
           {currentScreen === 'account' && (
             <AccountScreen
               onNavigate={(screen) => setCurrentScreen(screen)}
-              onLogout={() => setCurrentScreen('login')}
+              onLogout={handleLogout}
             />
           )}
 
@@ -491,8 +563,8 @@ export function App() {
               </div>
               <h3 className="text-lg font-black text-white">Protocolo SOS Activado</h3>
               <p className="text-xs text-[#AEB7C8] my-2 leading-relaxed">
-                Compartiendo telemetría en tiempo real con la Central de Seguridad de Formosa y
-                contactos de emergencia.
+                Esta versión de demostración todavía no contacta a emergencias ni comparte tu
+                ubicación. Ante un riesgo real, llamá al 911.
               </p>
               <button
                 type="button"
@@ -502,7 +574,7 @@ export function App() {
                 }}
                 className="w-full mt-3 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs cursor-pointer active:scale-95 transition-transform"
               >
-                Entendido / Cancelar alarma
+                Entendido
               </button>
             </div>
           </div>

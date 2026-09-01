@@ -15,10 +15,12 @@
 }
 
 @layer base {
-  * { font-family: var(--font-sans); }
-  html { background: var(--color-background); }
-  body { background: var(--color-background); color: var(--color-foreground); min-width: 320px; }
+  *, *::before, *::after { box-sizing: border-box; font-family: var(--font-sans); }
+  html { background: var(--color-background); min-width: 320px; }
+  body { background: var(--color-background); color: var(--color-foreground); min-width: 320px; min-height: 100dvh; overflow-x: hidden; }
+  #root { min-height: 100dvh; }
   button, [role='button'] { cursor: pointer; }
+  button, input, select, textarea { font: inherit; }
   :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
 }
 
@@ -37,3 +39,17 @@
 }
 
 .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+
+/* The product is mobile-first, but the same task flow must remain comfortable
+   on tablet and desktop instead of being locked inside a phone-shaped frame. */
+@media (min-width: 768px) {
+  .app-shell > main { min-height: 0; }
+  .app-shell .sticky { flex-shrink: 0; }
+  .app-shell button { min-height: 2.75rem; }
+}
+
+@media (min-width: 1024px) {
+  .app-shell { min-height: calc(100dvh - 5.5rem); }
+  .app-shell > main { overflow: auto; }
+  .app-shell .sticky.bottom-0 { padding-inline: 1.5rem; }
+}
